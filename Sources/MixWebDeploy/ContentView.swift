@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @ObservedObject var model: AppModel
+    @StateObject private var localBuild = LocalBuildModel()
     @State private var showSettings: Bool
     @State private var showDeployConfirmation = false
     @State private var showBranchPicker = false
@@ -19,11 +20,14 @@ struct ContentView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    LocalBuildView(model: localBuild, isRemoteRunning: model.isRunning)
                     connectionSettings
+                        .disabled(localBuild.isRunning)
                     deploymentControls
+                        .disabled(localBuild.isRunning)
                     if let action = model.displayedAction {
                         ExecutionProgressView(
-                            action: action,
+                            stages: action.stages,
                             currentStage: model.currentStage,
                             state: model.state,
                             resultSummary: model.resultSummary
@@ -57,7 +61,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Mix Web 部署工具")
                     .font(.title2.weight(.semibold))
-                Text("通过 Jumpserver 安全切换并更新服务器分支")
+                Text("服务器分支管理 · 本地客户端打包与替换")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

@@ -1,19 +1,19 @@
 import SwiftUI
 
 struct ExecutionProgressView: View {
-    let action: RemoteAction
+    let stages: [RunStage]
     let currentStage: RunStage?
     let state: RunState
     let resultSummary: String?
 
     private var currentIndex: Int {
-        action.stages.firstIndex(of: currentStage ?? .connect) ?? 0
+        stages.firstIndex(of: currentStage ?? .connect) ?? 0
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 8) {
-                ForEach(Array(action.stages.enumerated()), id: \.element.rawValue) { index, stage in
+                ForEach(Array(stages.enumerated()), id: \.element.rawValue) { index, stage in
                     VStack(spacing: 6) {
                         if index == currentIndex, case .running = state {
                             ProgressView().controlSize(.small).frame(height: 20)
@@ -33,7 +33,7 @@ struct ExecutionProgressView: View {
             if case let .failure(message) = state {
                 Text(message).foregroundStyle(.red).font(.callout).textSelection(.enabled)
             } else if case .cancelled = state {
-                Text("连接已断开，已执行的远程步骤不会撤销。请检查服务器状态。")
+                Text(stages.contains(.build) ? "本地打包已停止，未替换 main.min.js。" : "连接已断开，已执行的远程步骤不会撤销。请检查服务器状态。")
                     .foregroundStyle(.secondary).font(.callout)
             } else if let resultSummary {
                 Text(resultSummary).font(.caption.monospaced()).foregroundStyle(.secondary)

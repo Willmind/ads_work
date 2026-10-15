@@ -65,6 +65,7 @@ extension RemoteAction {
 
 enum RunStage: String {
     case connect, project, fetch, branches, check, checkout, pull, complete
+    case localCheck, build, artifact, backup, replace
 
     var title: String {
         switch self {
@@ -76,6 +77,11 @@ enum RunStage: String {
         case .checkout: return "切换分支"
         case .pull: return "拉取代码"
         case .complete: return "完成"
+        case .localCheck: return "检查本地项目"
+        case .build: return "打包当前分支"
+        case .artifact: return "校验产物"
+        case .backup: return "备份原文件"
+        case .replace: return "替换主文件"
         }
     }
 }

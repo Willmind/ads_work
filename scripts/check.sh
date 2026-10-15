@@ -12,3 +12,14 @@ xcrun swiftc -parse-as-library \
     "$PROJECT_DIR/scripts/self-check.swift" \
     -o "$PROJECT_DIR/.build/self-check"
 "$PROJECT_DIR/.build/self-check"
+xcrun swiftc -parse-as-library \
+    -module-cache-path "$PROJECT_DIR/.build/module-cache" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/AppSettings.swift" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/ConfigValidator.swift" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/OutputParser.swift" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/LocalBuildProcess.swift" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/LocalBuildService.swift" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/LocalBuildModel.swift" \
+    "$PROJECT_DIR/scripts/local-build-check.swift" \
+    -o "$PROJECT_DIR/.build/local-build-check"
+"$PROJECT_DIR/.build/local-build-check"
