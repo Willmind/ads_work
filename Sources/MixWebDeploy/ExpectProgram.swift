@@ -9,11 +9,50 @@ proc fail {code message} {
     exit $code
 }
 
+proc stage {name} {
+    puts "__MWD_STAGE__:$name"
+    flush stdout
+}
+
+# Interpret diagnostics here instead of forwarding private repository paths/users.
+proc branchFailure {status diagnostic} {
+    set diagnostic [string tolower $diagnostic]
+    if {[regexp {sudo:.*(password|terminal|tty)} $diagnostic]} {
+        fail 33 "远程 sudo 需要密码或交互终端，请确认该 Git 命令的免密授权"
+    } elseif {[regexp {(not in the sudoers|not allowed to execute|may not run sudo)} $diagnostic]} {
+        fail 36 "当前 SSH 用户没有执行此 sudo Git 命令的权限"
+    } elseif {[string first "not a git repository" $diagnostic] >= 0} {
+        fail 36 "项目目录不是 Git 仓库，或 Git 无法识别该目录下的仓库"
+    } elseif {[string first "dubious ownership" $diagnostic] >= 0} {
+        fail 36 "Git 拒绝访问属主不匹配的仓库，请管理员核对仓库属主和信任配置"
+    } elseif {[regexp {(unknown field name|unrecognized.*argument|unknown.*refname|unrecognized.*refname)} $diagnostic]} {
+        fail 36 "服务器 Git 不支持当前的分支格式参数，请确认已打开最新版本工具"
+    } elseif {[string first "permission denied" $diagnostic] >= 0} {
+        fail 36 "Git 读取仓库文件时被拒绝访问，请检查目录及文件权限"
+    } elseif {[regexp {(command not found|git: not found|git: no such file)} $diagnostic]} {
+        fail 36 "sudo 执行环境中找不到 Git，请管理员检查 Git 安装与命令路径"
+    }
+    fail 36 "git for-each-ref 返回错误（退出码 $status）；请管理员在目标目录核查该只读命令"
+}
+
+proc complete {} {
+    global spawn_id
+    puts "__MWD_DONE__"
+    flush stdout
+    send -- "exit\r"
+    exit 0
+}
+
+trap {exit 130} {SIGTERM SIGINT}
+
 if {$argc < 8} {
     fail 2 "启动参数不完整"
 }
 
 set action [lindex $argv 0]
+if {$action ni {test branches syncBranches deploy}} {
+    fail 4 "不支持的操作"
+}
 set host [lindex $argv 1]
 set port [lindex $argv 2]
 set username [lindex $argv 3]
@@ -42,7 +81,9 @@ if {$action eq "deploy" && ![regexp {^[A-Za-z0-9._/-]+$} $branch]} {
     fail 3 "Git 分支名格式不正确"
 }
 
-log_user 1
+# Only explicit progress/results are forwarded, never banners, menus or prompts.
+log_user 0
+match_max -d 1048576
 set timeout 35
 
 set sshCommand [list /usr/bin/ssh -tt \
@@ -55,8 +96,8 @@ set sshCommand [list /usr/bin/ssh -tt \
     -i $pem \
     "$username@$host"]
 
-puts "正在连接 Jumpserver..."
-spawn {*}$sshCommand
+stage connect
+spawn -noecho {*}$sshCommand
 
 expect {
     -re {(?i)permission denied} { fail 20 "SSH 身份验证失败" }
@@ -101,10 +142,10 @@ expect {
 
 if {$action eq "test"} {
     puts "\n连接测试成功。"
-    send -- "exit\r"
-    exit 0
+    complete
 }
 
+stage project
 set cdCommand [format {cd -- '%s' && printf '\n__MWD_CD_OK__\n' || printf '\n__MWD_CD_FAIL__\n'} $project]
 send -- "$cdCommand\r"
 expect {
@@ -115,31 +156,46 @@ expect {
 }
 
 set timeout 120
-send -- "sudo -n git fetch --prune origin && printf '\n__MWD_FETCH_OK__\n' || printf '\n__MWD_FETCH_FAIL__\n'\r"
-expect {
-    "__MWD_FETCH_OK__" { }
-    "__MWD_FETCH_FAIL__" { fail 32 "git fetch 失败；请检查 Git 权限或远程 sudo 配置" }
-    -re {(?i)sudo:.*password.*required} { fail 33 "远程 sudo 需要密码，工具不会保存明文密码" }
-    timeout { fail 34 "git fetch 执行超时" }
-    eof { fail 23 "SSH 连接提前关闭" }
+if {$action in {syncBranches deploy}} {
+    stage fetch
+    send -- "sudo -n git fetch --prune origin && printf '\n__MWD_FETCH_OK__\n' || printf '\n__MWD_FETCH_FAIL__\n'\r"
+    expect {
+        "__MWD_FETCH_OK__" { }
+        "__MWD_FETCH_FAIL__" { fail 32 "git fetch 失败；请检查 Git 远端访问和 sudo 权限" }
+        -re {(?i)sudo:.*password.*required} { fail 33 "远程 sudo 需要密码，工具不会保存明文密码" }
+        timeout { fail 34 "git fetch 执行超时" }
+        eof { fail 23 "SSH 连接提前关闭" }
+    }
 }
 
-if {$action eq "branches"} {
-    send -- "printf '\n__MWD_BRANCHES_BEGIN__\n'; sudo -n git for-each-ref --format='%(refname:short)' refs/remotes/origin | sed 's#^origin/##' | grep -v '^HEAD$' | sort -u; printf '__MWD_BRANCHES_END__\n'\r"
+if {$action in {branches syncBranches}} {
+    stage branches
+    # Use plain refname for older Git; strip the exact remote prefix locally.
+    # Capture the exit status and diagnostics, never turn a failed read into an empty list.
+    set branchesCommand {if refs=$(sudo -n git for-each-ref --format='%(refname)' refs/remotes/origin 2>&1); then printf '\n__MWD_BRANCHES_BEGIN__\n%s\n__MWD_BRANCHES_END__\n' "$refs"; else status=$?; printf '\n__MWD_BRANCHES_FAIL_BEGIN__:%s\n%s\n__MWD_BRANCHES_FAIL_END__\n' "$status" "$refs"; fi}
+    send -- "$branchesCommand\r"
     expect {
-        "__MWD_BRANCHES_END__" { }
-        -re {(?i)sudo:.*password.*required} { fail 33 "远程 sudo 需要密码" }
+        -re {\r?\n__MWD_BRANCHES_BEGIN__\r?\n(.*?)\r?\n__MWD_BRANCHES_END__\r?\n} {
+            puts "__MWD_BRANCHES_BEGIN__"
+            foreach ref [split $expect_out(1,string) "\n"] {
+                set ref [string trim $ref "\r"]
+                set prefix "refs/remotes/origin/"
+                if {[string first $prefix $ref] != 0} { continue }
+                set name [string range $ref [string length $prefix] end]
+                if {$name ne "HEAD" && $name ne ""} { puts $name }
+            }
+            puts "__MWD_BRANCHES_END__"
+        }
+        -re {\r?\n__MWD_BRANCHES_FAIL_BEGIN__:([0-9]+)\r?\n(.*?)\r?\n__MWD_BRANCHES_FAIL_END__\r?\n} {
+            branchFailure $expect_out(1,string) $expect_out(2,string)
+        }
         timeout { fail 35 "读取远程分支超时" }
         eof { fail 23 "SSH 连接提前关闭" }
     }
-    send -- "exit\r"
-    exit 0
+    complete
 }
 
-if {$action ne "deploy"} {
-    fail 4 "不支持的操作"
-}
-
+stage check
 set statusCommand {if status_output=$(sudo -n git status --porcelain); then if test -z "$status_output"; then printf '\n__MWD_CLEAN__\n'; else printf '\n__MWD_DIRTY__\n'; fi; else printf '\n__MWD_STATUS_FAIL__\n'; fi}
 send -- "$statusCommand\r"
 expect {
@@ -151,6 +207,7 @@ expect {
     eof { fail 23 "SSH 连接提前关闭" }
 }
 
+stage checkout
 set checkoutCommand [format {if sudo -n git show-ref --verify --quiet 'refs/heads/%s'; then sudo -n git checkout '%s'; elif sudo -n git show-ref --verify --quiet 'refs/remotes/origin/%s'; then sudo -n git checkout --track 'origin/%s'; else false; fi && printf '\n__MWD_CHECKOUT_OK__\n' || printf '\n__MWD_CHECKOUT_FAIL__\n'} $branch $branch $branch $branch]
 send -- "$checkoutCommand\r"
 expect {
@@ -161,6 +218,7 @@ expect {
     eof { fail 23 "SSH 连接提前关闭" }
 }
 
+stage pull
 set pullCommand [format {sudo -n git pull --ff-only origin '%s' && printf '\n__MWD_PULL_OK__\n' || printf '\n__MWD_PULL_FAIL__\n'} $branch]
 send -- "$pullCommand\r"
 expect {
@@ -171,14 +229,15 @@ expect {
     eof { fail 23 "SSH 连接提前关闭" }
 }
 
-send -- "printf '\n当前提交：'; sudo -n git rev-parse --short HEAD; printf '__MWD_DEPLOY_OK__\n'\r"
+set commitCommand {if commit=$(sudo -n git rev-parse --short HEAD); then printf '\n__MWD_COMMIT__:%s\n' "$commit"; else printf '\n__MWD_COMMIT_FAIL__\n'; fi}
+send -- "$commitCommand\r"
 expect {
-    "__MWD_DEPLOY_OK__" { }
+    -re {\r?\n__MWD_COMMIT__:([0-9a-f]{7,40})\r?\n} { puts "__MWD_COMMIT__:$expect_out(1,string)" }
+    "__MWD_COMMIT_FAIL__" { fail 48 "代码已拉取，但读取提交号失败，请检查服务器状态" }
     timeout { fail 47 "读取当前提交信息超时" }
     eof { fail 23 "SSH 连接提前关闭" }
 }
 
-send -- "exit\r"
-exit 0
+complete
 """#
 }

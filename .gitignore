@@ -2,3 +2,6 @@
 dist/
 .DS_Store
 *.pem
+
+# 本地团队说明配图含内部信息，不提交到 Git。
+/docs/guide-images/

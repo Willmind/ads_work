@@ -1,0 +1,58 @@
+#!/usr/bin/expect
+# Offline interactive transport fixture; never connects to a host or runs Git.
+set scenario [lindex $argv 0]
+exec /bin/stty raw -echo <@ stdin
+fconfigure stdin -translation cr
+fconfigure stdout -translation lf -buffering none
+puts "mock-private-banner tester@example.invalid"
+puts "Menu 1?"
+gets stdin choice
+puts "Menu 2?"
+gets stdin choice
+puts "mock-user@target$ "
+
+while {[gets stdin command] >= 0} {
+    if {$command eq "exit"} { exit 0 }
+    if {$command eq "stty -echo"} {
+        puts "mock-user@target$ "
+    } elseif {[string first "__MWD_SHELL_READY__" $command] >= 0} {
+        puts "\n__MWD_SHELL_READY__"
+    } elseif {[string first "cd --" $command] == 0} {
+        puts "\n__MWD_CD_OK__"
+    } elseif {[string first "git fetch" $command] >= 0} {
+        if {$scenario in {quick fetch-fail}} { puts "\n__MWD_FETCH_FAIL__" } else { puts "\n__MWD_FETCH_OK__" }
+    } elseif {[string first "for-each-ref" $command] >= 0} {
+        if {[string first "refname:" $command] >= 0} {
+            puts "\n__MWD_BRANCHES_FAIL_BEGIN__:128\nfatal: unknown refname format\n__MWD_BRANCHES_FAIL_END__"
+        } elseif {$scenario eq "read-fail"} {
+            puts "\n__MWD_BRANCHES_FAIL_BEGIN__:128\nfatal: not a git repository: /private/mock-secret-repo\n__MWD_BRANCHES_FAIL_END__"
+        } elseif {$scenario eq "sudo-fail"} {
+            puts "\n__MWD_BRANCHES_FAIL_BEGIN__:1\nsudo: a password is required\n__MWD_BRANCHES_FAIL_END__"
+        } elseif {$scenario eq "ownership-fail"} {
+            puts "\n__MWD_BRANCHES_FAIL_BEGIN__:128\nfatal: detected dubious ownership in repository at /private/mock-secret-repo\n__MWD_BRANCHES_FAIL_END__"
+        } elseif {$scenario eq "permission-fail"} {
+            puts "\n__MWD_BRANCHES_FAIL_BEGIN__:128\nfatal: /private/mock-secret-repo: Permission denied\n__MWD_BRANCHES_FAIL_END__"
+        } elseif {$scenario eq "unknown-fail"} {
+            puts "\n__MWD_BRANCHES_FAIL_BEGIN__:77\nunknown failure for private-user@private-host in /private/mock-secret-repo\n__MWD_BRANCHES_FAIL_END__"
+        } else {
+            puts "\n__MWD_BRANCHES_BEGIN__"
+            if {$scenario eq "empty"} {
+                puts ""
+            } else {
+                puts "refs/remotes/origin/HEAD\nrefs/remotes/origin/main\nrefs/remotes/origin/feature/login\nrefs/remotes/origin/main\nrefs/remotes/origin/origin/nested\nrefs/remotes/upstream/ignore"
+            }
+            puts "__MWD_BRANCHES_END__"
+        }
+    } elseif {[string first "git status" $command] >= 0} {
+        if {$scenario eq "dirty"} { puts "\n__MWD_DIRTY__" } else { puts "\n__MWD_CLEAN__" }
+    } elseif {[string first "git checkout" $command] >= 0} {
+        puts "\n__MWD_CHECKOUT_OK__"
+    } elseif {[string first "git pull --ff-only" $command] >= 0} {
+        if {$scenario eq "pull-fail"} { puts "\n__MWD_PULL_FAIL__" } else { puts "\n__MWD_PULL_OK__" }
+    } elseif {[string first "rev-parse" $command] >= 0} {
+        puts "\n__MWD_COMMIT__:a1b2c3d"
+    } else {
+        puts "Unexpected command in mock transport"
+        exit 1
+    }
+}
