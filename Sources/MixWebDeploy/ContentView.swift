@@ -4,6 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @StateObject private var localBuild = LocalBuildModel()
+    @State private var showLocalJS = true
     @State private var showSettings: Bool
     @State private var showDeployConfirmation = false
     @State private var showBranchPicker = false
@@ -15,27 +16,37 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    LocalBuildView(model: localBuild, isRemoteRunning: model.isRunning)
-                    connectionSettings
-                        .disabled(localBuild.isRunning)
-                    deploymentControls
-                        .disabled(localBuild.isRunning)
-                    if let action = model.displayedAction {
-                        ExecutionProgressView(
-                            stages: action.stages,
-                            currentStage: model.currentStage,
-                            state: model.state,
-                            resultSummary: model.resultSummary
-                        )
+            if showLocalJS {
+                LocalWebView(model: localBuild, remote: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                header
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        connectionSettings.disabled(localBuild.isRunning)
+                        deploymentControls.disabled(localBuild.isRunning)
+                        if let action = model.displayedAction {
+                            ExecutionProgressView(stages: action.stages, currentStage: model.currentStage,
+                                                  state: model.state, resultSummary: model.resultSummary)
+                        }
+                        logPanel
                     }
-                    logPanel
+                    .padding(24)
+                    .frame(maxWidth: 1160, alignment: .leading)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(22)
+            }
+        }
+        .toolbar {
+            ToolbarItem {
+                Picker("工作区", selection: $showLocalJS) {
+                    Text("JS 本地管理").tag(true)
+                    Text("服务器分支管理").tag(false)
+                }
+                .labelsHidden().pickerStyle(.segmented).frame(width: 290)
+                .disabled(localBuild.isRunning || model.isRunning)
+                .accessibilityLabel("选择工作区")
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -54,20 +65,20 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "shippingbox.and.arrow.backward.fill")
+            Image(systemName: "shippingbox.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(.blue)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Mix Web 部署工具")
+                Text(showLocalJS ? "JS 本地管理" : "Mix Web 部署工具")
                     .font(.title2.weight(.semibold))
-                Text("服务器分支管理 · 本地客户端打包与替换")
+                Text("本地 JS 打包、下载、管理与安装")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
-            statusBadge
+            if !showLocalJS { statusBadge }
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 16)

@@ -33,13 +33,13 @@ enum LocalBuildCheck {
             _ = try process.run("/usr/bin/git", ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"], in: project)
             return LocalBuildSettings(projectPath: project.path, libraryPath: library.path)
         }
-        let write = "const fs = require('fs'); fs.writeFileSync('build/v1_main.min.js', 'fresh bundle');"
+        let write = "const fs = require('fs'); fs.writeFileSync('build/v1_main.min.js', 'module.exports=42;');"
         let success = try fixture("same name", script: write)
         let service = LocalBuildService(cancellation: cancellation)
         let result = try service.run(settings: success) { _ in }
         try check(result.branch == "fixture-branch", "reports actual local branch")
-        try check(try text(result.destination) == "fresh bundle", "same-name output replaces existing target")
-        try check(try text(result.artifact) == "fresh bundle", "fresh build stays in build directory")
+        try check(try text(result.destination) == "module.exports=42;", "same-name output replaces existing target")
+        try check(try text(result.artifact) == "module.exports=42;", "fresh build stays in build directory")
         try check(result.backup != nil && (try text(result.backup!)) == "original target", "backup preserves original bytes")
         try check(try text(URL(fileURLWithPath: success.projectPath).appendingPathComponent("build/v0_main.min.js")) == "historic", "historic output survives")
         try check(!files.fileExists(atPath: success.projectPath + "/.ads-work-build.lock"), "lock cleaned up")
@@ -47,7 +47,7 @@ enum LocalBuildCheck {
 
         // Rebuild identical bytes; no mtime comparison is involved.
         let repeated = try service.run(settings: success) { _ in }
-        try check(try text(repeated.destination) == "fresh bundle", "identical output may still be installed")
+        try check(try text(repeated.destination) == "module.exports=42;", "identical output may still be installed")
         try check(repeated.backup != result.backup, "backups never overwrite one another")
 
         for (name, script) in [
@@ -103,9 +103,9 @@ enum LocalBuildCheck {
         do { _ = try service.run(settings: symlink) { _ in } } catch { symlinkRejected = true }
         try check(symlinkRejected, "dangling target symlink must be rejected")
         let defaults = LocalMemoryDefaults()
-        let model = LocalBuildModel(defaults: defaults)
+        let model = LocalBuildModel(defaults: defaults, archiveRoot: root.appendingPathComponent("model library"))
         model.settings = success
-        try check(LocalBuildModel(defaults: defaults).settings == success, "local paths persist independently of SSH settings")
+        try check(LocalBuildModel(defaults: defaults, archiveRoot: root.appendingPathComponent("model library")).settings == success, "local paths persist independently of SSH settings")
         model.start()
         let deadline = Date().addingTimeInterval(15)
         while model.isRunning && Date() < deadline { try await Task.sleep(nanoseconds: 20_000_000) }
@@ -117,7 +117,8 @@ enum LocalBuildCheck {
         while model.isRunning && Date() < failureDeadline { try await Task.sleep(nanoseconds: 20_000_000) }
         if case .failure = model.state {} else { throw LocalBuildError.message("model must report validation failure") }
         try check(model.result == nil && model.showResult, "UI clears previous success and shows failure alert")
-        print("Local build check passed")
+        try await JSManagerCheck.run(root: root)
+        print("Local build and JS manager checks passed")
     }
 }
 

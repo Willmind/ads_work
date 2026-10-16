@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>AdsWorkJsManager</AssemblyName>
+    <ApplicationIcon>../Assets/AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <DebugType>none</DebugType>
+    <WebView2SdkVersion>1.0.4258.31</WebView2SdkVersion>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Product>AdsWork JS 本地管理</Product>
+    <Description>本地 JS 打包、下载、归档、安装与备份恢复工具</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../JsLocalManager.Core/JsLocalManager.Core.csproj" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="$(WebView2SdkVersion)" />
+    <EmbeddedResource Include="../Assets/AppIcon.png" LogicalName="AppIcon.png" />
+    <EmbeddedResource Include="../../Shared/WebUI/*" LogicalName="WebUI.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="RemoveUnusedWebView2Wpf" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+  <Target Name="CopyWebView2Loader" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <Copy SourceFiles="$([System.IO.Path]::Combine('$(NuGetPackageRoot)', 'microsoft.web.webview2/$(WebView2SdkVersion)/runtimes/win-x64/native/WebView2Loader.dll'))" DestinationFolder="$(PublishDir)" />
+  </Target>
+</Project>

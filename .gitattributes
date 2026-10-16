@@ -1,0 +1,2 @@
+# 保留上游许可证的原始行尾与排版。
+windows/Licenses/* -text -whitespace

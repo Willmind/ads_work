@@ -33,7 +33,7 @@ struct ExecutionProgressView: View {
             if case let .failure(message) = state {
                 Text(message).foregroundStyle(.red).font(.callout).textSelection(.enabled)
             } else if case .cancelled = state {
-                Text(stages.contains(.build) ? "本地打包已停止，未替换 main.min.js。" : "连接已断开，已执行的远程步骤不会撤销。请检查服务器状态。")
+                Text(!stages.contains(.connect) ? "本地操作已停止，已保存的 JS 和备份会保留。" : "连接已断开，已执行的远程步骤不会撤销。请检查服务器状态。")
                     .foregroundStyle(.secondary).font(.callout)
             } else if let resultSummary {
                 Text(resultSummary).font(.caption.monospaced()).foregroundStyle(.secondary)

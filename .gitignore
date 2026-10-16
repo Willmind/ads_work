@@ -5,3 +5,12 @@ dist/
 
 # 本地团队说明配图含内部信息，不提交到 Git。
 /docs/guide-images/
+
+# Windows .NET 构建输出
+/windows/**/bin/
+/windows/**/obj/
+
+# 浏览器界面自检输出
+/windows/web-check-output/
+/web-check-output/
+/mac-web-check-output/

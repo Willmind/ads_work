@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <title>JS 本地管理</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+<svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+  <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/></symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5Zm0 4 9 5 9-5M3 16l9 5 9-5"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 9a8 8 0 1 0 0 6M20 3v6h-6"/></symbol>
+  <symbol id="icon-box" viewBox="0 0 24 24"><path d="m12 3 9 5v9l-9 5-9-5V8Zm-9 5 9 5 9-5M12 13v9M7.5 5.5l9 5"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+  <symbol id="icon-restore" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol>
+  <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="icon-file" viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5Zm9 0v6h5M8 13h8M8 17h5"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+</defs></svg>
+<div id="previewBanner" class="preview-banner" hidden>界面预览 · 所有操作均为演示，不会读写本机文件</div>
+<header class="app-header">
+  <div class="header-inner"><div class="brand"><img src="logo.svg" alt="" width="52" height="52"><div><h1>JS 本地管理</h1><p>本地打包、下载、管理与安装</p></div></div><span class="local-badge"><span></span>本地工作区</span></div>
+</header>
+<main class="workspace">
+  <section aria-labelledby="targetTitle">
+    <div class="section-heading"><h2 id="targetTitle"><svg><use href="#icon-folder"/></svg>安装位置</h2><span class="section-aside">main.min.js</span></div>
+    <div class="card target-card"><div class="path-row"><label for="libraryPath">目标 lib</label><input id="libraryPath" type="text" spellcheck="false" autocomplete="off"><button type="button" data-action="chooseLibrary">选择…</button><button type="button" data-action="saveSettings" class="text-button">保存</button></div><p class="helper">安装前自动备份原文件。请先完全退出 AdsPower，再安装或恢复。</p></div>
+  </section>
+  <section aria-labelledby="addTitle">
+    <div class="section-heading"><h2 id="addTitle"><svg><use href="#icon-plus"/></svg>添加 JS</h2></div>
+    <div class="card add-card">
+      <div class="source-top"><span class="field-caption">JS 来源</span><div class="segmented" role="tablist" aria-label="JS 来源"><button id="tab-build" type="button" role="tab" aria-selected="true" aria-controls="panel-build" data-mode="build">本地打包</button><button id="tab-download" type="button" role="tab" aria-selected="false" aria-controls="panel-download" data-mode="download">链接下载</button><button id="tab-file" type="button" role="tab" aria-selected="false" aria-controls="panel-file" data-mode="file">导入文件</button></div></div>
+      <div id="panel-build" class="source-panel" role="tabpanel" aria-labelledby="tab-build"><div class="path-row"><label for="projectPath">本地项目</label><input id="projectPath" type="text" spellcheck="false" autocomplete="off"><button type="button" data-action="chooseProject">选择…</button></div><p class="helper"><code>npm run buildLb</code> · 使用当前分支，包含未提交修改。每次保存独立副本。</p></div>
+      <div id="panel-download" class="source-panel" role="tabpanel" aria-labelledby="tab-download" hidden><label class="sr-only" for="downloadUrl">JS 下载链接</label><input id="downloadUrl" type="url" class="full-input" placeholder="粘贴 version.adspower.net 的完整 JS 下载链接" spellcheck="false"><label class="sr-only" for="downloadMd5">预期 MD5</label><input id="downloadMd5" type="text" class="full-input secondary-input" placeholder="预期 MD5（选填，自动识别链接末尾 MD5）" spellcheck="false" maxlength="32"><p class="helper">下载后先保存在本地历史，不自动安装，也不需要后台登录信息。</p></div>
+      <div id="panel-file" class="source-panel import-prompt" role="tabpanel" aria-labelledby="tab-file" hidden><svg><use href="#icon-file"/></svg><div><strong>导入已有的主 JS</strong><p class="helper">选择完整 JS 文件，检查语法和摘要后保存到本地历史。</p></div></div>
+      <label class="sr-only" for="newNote">本次 JS 备注</label><input id="newNote" class="full-input" type="text" maxlength="4000" placeholder="备注：例如需求编号、修复内容或测试目的">
+      <div class="action-row"><span id="sourceHint" class="helper">保存和安装均在本机完成</span><div class="button-group"><button id="buildInstall" type="button" data-action="buildInstall">打包并安装</button><button id="addPrimary" type="button" data-action="buildSave" class="primary"><svg><use href="#icon-box"/></svg><span>打包保存</span></button></div></div>
+    </div>
+  </section>
+  <section id="operationCard" class="operation-card" aria-live="polite" hidden><div class="operation-icon" id="operationIcon"></div><div class="operation-copy"><strong id="stage">准备就绪</strong><p id="status"></p></div><button id="cancel" type="button" class="danger" data-action="cancel" hidden>停止</button></section>
+  <section aria-labelledby="historyTitle">
+    <div class="section-heading"><h2 id="historyTitle"><svg><use href="#icon-layers"/></svg>本地 JS 历史</h2><span id="recordCount" class="count-badge">0 条</span></div>
+    <div class="card history-card"><div class="search-row"><div class="search-field"><svg><use href="#icon-search"/></svg><label class="sr-only" for="search">搜索本地 JS</label><input id="search" type="search" placeholder="搜索版本、备注、分支…"></div><button type="button" data-action="state" aria-label="刷新历史"><svg><use href="#icon-refresh"/></svg>刷新</button></div>
+      <div id="tableWrap" class="table-scroll" hidden><table><thead><tr><th>版本</th><th>备注</th><th>来源</th><th>分支</th><th>保存时间</th></tr></thead><tbody id="records"></tbody></table></div>
+      <div id="emptyState" class="empty-state"><div class="empty-icon"><svg><use href="#icon-layers"/></svg></div><strong id="emptyTitle">还没有保存的 JS</strong><p id="emptyDescription">打包、下载或导入后，每个版本都会保留在这里。</p></div>
+      <div id="selection" class="selection-panel" hidden><div class="edit-grid"><label>版本<input id="editVersion" type="text" maxlength="100"></label><label>备注<input id="editNote" type="text" maxlength="4000" placeholder="对应的需求或测试内容"></label><button type="button" data-action="updateMetadata">保存备注</button></div><details class="file-details"><summary><svg class="detail-chevron" aria-hidden="true"><use href="#icon-chevron"/></svg><span>文件信息与校验值</span></summary><p id="fileDetails"></p></details><div class="action-row"><button type="button" data-action="openArchive" class="text-button"><svg><use href="#icon-folder"/></svg>在文件夹中查看</button><div class="button-group"><span class="helper">安装前自动备份原文件</span><button type="button" class="primary" data-action="install"><svg><use href="#icon-download"/></svg>安装选中版本</button></div></div></div>
+    </div>
+  </section>
+  <details id="backupDisclosure" class="card disclosure-card"><summary><span><svg><use href="#icon-restore"/></svg>备份与恢复 <span id="backupCount" class="small-count">0</span></span><svg class="chevron"><use href="#icon-chevron"/></svg></summary><div class="disclosure-content"><p id="backupEmpty" class="helper">当前目标还没有备份。安装时会自动保存原 main.min.js。</p><div id="backupControls" class="backup-row" hidden><label class="sr-only" for="backups">选择备份</label><select id="backups" hidden aria-hidden="true" tabindex="-1"></select><button id="backupPicker" class="select-trigger" type="button" aria-label="选择备份" aria-haspopup="listbox" aria-expanded="false" aria-controls="backupMenu"><span>选择备份</span><svg><use href="#icon-chevron"/></svg></button><button type="button" data-action="restore">恢复选中备份</button></div><p class="helper">恢复前也会备份当前文件；文件缺失或校验不一致时会停止。</p></div></details>
+  <details id="logDisclosure" class="card disclosure-card" hidden><summary><span><svg><use href="#icon-file"/></svg>操作日志</span><svg class="chevron"><use href="#icon-chevron"/></svg></summary><div class="disclosure-content"><pre id="log"></pre><button type="button" data-action="copyLog">复制日志</button></div></details>
+  <footer><span class="footer-dot"></span>记录只保存在本机，不上传 JS，不修改后台数据。<span class="version">0.6.0</span></footer>
+</main>
+<div id="backupMenu" class="select-menu" role="listbox" aria-label="选择备份" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
+</body></html>

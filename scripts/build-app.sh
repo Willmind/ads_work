@@ -28,6 +28,9 @@ mkdir -p "$APP_DIR/Contents/Resources"
 
 cp "$PROJECT_DIR/.build/release/$EXECUTABLE_NAME" "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME"
 cp "$PROJECT_DIR/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
+cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
+
+cp -R "$PROJECT_DIR/Shared/WebUI" "$APP_DIR/Contents/Resources/WebUI"
 
 chmod 755 "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME"
 codesign --force --deep --sign - "$APP_DIR"

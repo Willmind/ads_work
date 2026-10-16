@@ -1,4 +1,3 @@
-import CryptoKit
 import Darwin
 import Foundation
 
@@ -21,6 +20,7 @@ struct LocalBuildResult {
     let destination: URL
     let backup: URL?
     let checksum: String
+    var didInstall = true
 }
 
 enum LocalBuildEvent {
@@ -51,15 +51,13 @@ struct LocalBuildService {
     exec npm run buildLb
     """#
 
-    func run(settings: LocalBuildSettings, onEvent: (LocalBuildEvent) -> Void) throws -> LocalBuildResult {
+    func run(settings: LocalBuildSettings, installAfterBuild: Bool = true, onEvent: (LocalBuildEvent) -> Void) throws -> LocalBuildResult {
         onEvent(.stage(.localCheck))
         let project = try directory(settings.projectPath, label: "本地项目")
-        let library = try directory(settings.libraryPath, label: "目标 lib")
-        let destination = library.appendingPathComponent("main.min.js")
-        guard files.isWritableFile(atPath: library.path) else {
-            throw LocalBuildError.message("目标 lib 目录不可写，请检查目录权限。")
-        }
-        try validateDestination(destination)
+        let library = URL(fileURLWithPath: settings.libraryPath, isDirectory: true).standardizedFileURL
+        let destination = installAfterBuild
+            ? try JSFile.destination(in: settings.libraryPath)
+            : library.appendingPathComponent("main.min.js")
         let packageURL = project.appendingPathComponent("package.json")
         let package = try JSONSerialization.jsonObject(with: Data(contentsOf: packageURL)) as? [String: Any]
         guard let scripts = package?["scripts"] as? [String: String], scripts["buildLb"] != nil else {
@@ -115,13 +113,16 @@ struct LocalBuildService {
             guard (try artifact.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0 > 0 else {
                 throw LocalBuildError.message("本次产物为空，未替换目标。")
             }
-            let checksum = try digest(artifact)
+            let checksum = try JSFile.inspect(artifact).sha256
             onEvent(.message("本次产物：\(artifact.lastPathComponent) · SHA-256 \(checksum)"))
             // Restore historic versions before installing. Keep this run's version fresh.
             try restore(stash: stash, build: build, excluding: artifact.lastPathComponent)
             try cancellation.check()
-            let backup = try install(artifact, destination: destination, checksum: checksum, onEvent: onEvent)
-            return LocalBuildResult(branch: branch, artifact: artifact, destination: destination, backup: backup, checksum: checksum)
+            let backup = installAfterBuild
+                ? try JSInstaller(cancellation: cancellation).install(artifact, destination: destination, checksum: checksum) { onEvent(.stage($0)) }
+                : nil
+            return LocalBuildResult(branch: branch, artifact: artifact, destination: destination, backup: backup, checksum: checksum,
+                                    didInstall: installAfterBuild)
         } catch {
             do {
                 try restore(stash: stash, build: build)
@@ -166,52 +167,4 @@ struct LocalBuildService {
         try files.removeItem(at: stash)
     }
 
-    private func validateDestination(_ url: URL) throws {
-        if let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]),
-           values.isRegularFile != true || values.isSymbolicLink == true {
-            throw LocalBuildError.message("目标 main.min.js 必须是普通文件，不能是目录或符号链接。")
-        }
-    }
-
-    private func install(_ artifact: URL, destination: URL, checksum: String,
-                         onEvent: (LocalBuildEvent) -> Void) throws -> URL? {
-        let temporary = destination.deletingLastPathComponent().appendingPathComponent(".main-\(UUID().uuidString).tmp")
-        defer { try? files.removeItem(at: temporary) }
-        try files.copyItem(at: artifact, to: temporary)
-        guard try digest(temporary) == checksum else { throw LocalBuildError.message("复制后的 JS 校验失败，未替换目标。") }
-        try cancellation.check()
-        onEvent(.stage(.backup))
-        try validateDestination(destination)
-        var backup: URL?
-        if files.fileExists(atPath: destination.path) {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyyMMdd-HHmmss"
-            let url = destination.appendingPathExtension("backup-\(formatter.string(from: Date()))-\(UUID().uuidString.prefix(8))")
-            try files.copyItem(at: destination, to: url)
-            guard try digest(url) == digest(destination) else {
-                throw LocalBuildError.message("原文件备份校验失败，未替换目标。")
-            }
-            let attributes = try files.attributesOfItem(atPath: destination.path)
-            if let permissions = attributes[.posixPermissions] {
-                try files.setAttributes([.posixPermissions: permissions], ofItemAtPath: temporary.path)
-            }
-            backup = url
-            onEvent(.message("原 main.min.js 已备份。"))
-        }
-        try cancellation.check()
-        onEvent(.stage(.replace))
-        // Same-directory rename is atomic; failures leave the existing file intact.
-        guard rename(temporary.path, destination.path) == 0 else {
-            throw LocalBuildError.message("替换 main.min.js 失败：\(String(cString: strerror(errno)))。原文件仍保留。")
-        }
-        return backup
-    }
-
-    private func digest(_ url: URL) throws -> String {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        var hash = SHA256()
-        while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty { hash.update(data: data) }
-        return hash.finalize().map { String(format: "%02x", $0) }.joined()
-    }
 }

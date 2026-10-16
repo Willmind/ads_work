@@ -7,8 +7,9 @@ struct MixWebDeployApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(model: model)
-                .frame(minWidth: 820, minHeight: 620)
+                .frame(minWidth: 960, minHeight: 660)
         }
+        .defaultSize(width: 1100, height: 860)
         .windowStyle(.titleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }

@@ -1,0 +1,7 @@
+{
+  "checks" : 21,
+  "failures" : [
+
+  ],
+  "scope" : "真实 Mac WKWebView、页面消息桥接、临时目录安装与恢复；不接触用户 AdsPower 文件"
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect x="96" y="96" width="832" height="832" rx="180" fill="#fff"/>
+  <defs><clipPath id="cube"><path d="M512 210 L794 376 L794 650 L512 814 L230 650 L230 376 Z"/></clipPath></defs>
+  <path d="M512 210 L794 376 L794 650 L512 814 L230 650 L230 376 Z" fill="#007aff"/>
+  <g clip-path="url(#cube)" fill="none" stroke="#fff" stroke-width="22" stroke-linejoin="miter">
+    <path d="M230 376 L512 536 L794 376"/>
+<path d="M512 536 L512 814"/>
+<path d="M372 292 L654 456"/>
+  </g>
+</svg>
