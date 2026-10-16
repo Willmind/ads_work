@@ -79,6 +79,7 @@ struct MacWebCheck {
                 for width in [1100, 680] {
                     window.setContentSize(NSSize(width: width, height: width == 1100 ? 1400 : 880)); try await Task.sleep(nanoseconds: 150_000_000)
                     try check((try await js("document.documentElement.scrollWidth <= innerWidth + 1")) as? Bool == true, "页面不横向溢出 \(width)")
+                    try check((try await js("(()=>{const icons=[...document.querySelectorAll('svg.icon')].filter(s=>s.getClientRects().length);return icons.length>0&&icons.every(s=>s.querySelector('use').getBBox().width>0&&s.querySelector('use').getBBox().height>0)})()")) as? Bool == true, "Lucide 图标通过 Mac 本地资源通道实际渲染 \(width)")
                     let alignment = try await js("(()=>{const s=document.querySelector('.file-details>summary'),a=s.querySelector('svg').getBoundingClientRect(),t=s.querySelector('span').getBoundingClientRect(),i=document.querySelector('#editVersion').getBoundingClientRect();return Math.abs(a.y+a.height/2-t.y-t.height/2)<1 && Math.abs(a.x-i.x)<1})()") as? Bool
                     try check(alignment == true, "箭头与文字居中且与输入框左边对齐 \(width)")
                     let config = WKSnapshotConfiguration(); config.afterScreenUpdates = false

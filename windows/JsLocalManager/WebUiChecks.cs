@@ -35,13 +35,14 @@ internal static class WebUiChecks
                     foreach (var mode in new[] { "build", "download", "file" })
                     {
                         await form.Browser.ExecuteScriptAsync($"document.querySelector('#tab-{mode}').click()");
-                        await Task.Delay(100);
+                        await Task.Delay(280);
                         var json = await form.Browser.ExecuteScriptAsync("""
                             JSON.stringify({
                               connected: !!window.chrome?.webview,
                               ready: document.documentElement.dataset.ready,
                               overflow: document.documentElement.scrollWidth > innerWidth + 1,
                               clipped: [...document.querySelectorAll('button')].filter(b=>b.getClientRects().length && (b.scrollWidth>b.clientWidth+2 || b.scrollHeight>b.clientHeight+2)).map(b=>b.textContent),
+                              missingIcons: [...document.querySelectorAll('svg.icon')].filter(s=>s.getClientRects().length && (!s.querySelector('use').getBBox().width || !s.querySelector('use').getBBox().height)).map(s=>s.querySelector('use').getAttribute('href')),
                               rows: document.querySelectorAll('#records tr').length
                             })
                             """);
@@ -49,7 +50,8 @@ internal static class WebUiChecks
                         var value = result.RootElement;
                         var name = $"width-{width}-zoom-{zoom:0.00}-{mode}";
                         if (!value.GetProperty("connected").GetBoolean() || value.GetProperty("ready").GetString() != "true" ||
-                            value.GetProperty("overflow").GetBoolean() || value.GetProperty("clipped").GetArrayLength() != 0 || value.GetProperty("rows").GetInt32() != 1)
+                            value.GetProperty("overflow").GetBoolean() || value.GetProperty("clipped").GetArrayLength() != 0 ||
+                            value.GetProperty("missingIcons").GetArrayLength() != 0 || value.GetProperty("rows").GetInt32() != 1)
                             errors.Add(name + ": " + value.GetRawText());
                         await using var output = File.Create(Path.Combine(report, name + ".png"));
                         await form.Browser.CoreWebView2!.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, output);

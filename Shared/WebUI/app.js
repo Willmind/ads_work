@@ -123,9 +123,9 @@ function setMode(next) {
     $(`#panel-${button.dataset.mode}`).hidden = !active;
   }
   const primary = $('#addPrimary');
-  const names = { build: ['buildSave', '打包保存', 'box'], download: ['download', '下载并保存', 'download'], file: ['import', '选择 JS 并导入', 'file'] };
+  const names = { build: ['buildSave', '打包保存', 'package'], download: ['download', '下载并保存', 'download'], file: ['import', '选择 JS 并导入', 'file-input'] };
   primary.dataset.action = names[next][0]; primary.querySelector('span').textContent = names[next][1];
-  primary.querySelector('use').setAttribute('href', `#icon-${names[next][2]}`);
+  primary.querySelector('use').setAttribute('href', `icons.svg#${names[next][2]}`);
   $('#buildInstall').hidden = next !== 'build'; setBusy();
   moveTabIndicator();
   if (changed) { resizeCard($('.add-card'), previousHeight); entrance($(`#panel-${next}`)); }

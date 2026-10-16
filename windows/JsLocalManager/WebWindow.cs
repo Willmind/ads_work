@@ -81,7 +81,7 @@ internal sealed class WebWindow : Form
         var assets = new Dictionary<string, string>
         {
             ["index.html"] = "text/html", ["styles.css"] = "text/css", ["app.js"] = "text/javascript",
-            ["bridge.js"] = "text/javascript", ["preview.js"] = "text/javascript", ["motion.js"] = "text/javascript", ["logo.svg"] = "image/svg+xml"
+            ["bridge.js"] = "text/javascript", ["preview.js"] = "text/javascript", ["motion.js"] = "text/javascript", ["logo.svg"] = "image/svg+xml", ["icons.svg"] = "image/svg+xml"
         };
         if (args.Request.Method != "GET" || uri.Scheme != "https" || uri.Host != "adswork.local" ||
             uri.Port != 443 || uri.Query.Length != 0 || !assets.TryGetValue(name, out var mime))

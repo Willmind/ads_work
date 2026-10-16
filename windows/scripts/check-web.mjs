@@ -21,6 +21,8 @@ try {
     for (const source of ['build', 'download', 'file']) {
       await page.locator(`#tab-${source}`).click();
       check(await page.locator(`#panel-${source}`).isVisible(), `来源切换 ${width} ${source}`);
+      await page.waitForTimeout(280);
+      check(await page.locator('svg.icon:visible use').evaluateAll(icons => icons.length > 0 && icons.every(icon => icon.getBBox().width > 0 && icon.getBBox().height > 0)), `功能图标实际渲染 ${width} ${source}`);
       const layout = await page.evaluate(() => {
         const errors = [];
         if (document.documentElement.scrollWidth > innerWidth + 1) errors.push('页面横向溢出');

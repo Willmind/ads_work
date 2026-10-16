@@ -1,6 +1,6 @@
 # AdsWork JS 本地管理 · Windows 0.6.0
 
-Windows 版采用本地 HTML/CSS + WebView2 界面，沿用现有 C# 本地功能。与 Mac 共用 `Shared/WebUI` 的苹果风格页面，包含圆角卡片、分段按钮和蓝色主按钮；不包含服务器分支管理，不向后台上传或修改数据。
+Windows 版采用本地 HTML/CSS + WebView2 界面，沿用现有 C# 本地功能。与 Mac 共用 `Shared/WebUI` 的苹果风格页面和 Lucide SVG 图标，统一卡片内距、表单对齐、控件高度与分区间距；不包含服务器分支管理，不向后台上传或修改数据。
 
 ## 启动
 
@@ -13,6 +13,8 @@ Windows 版采用本地 HTML/CSS + WebView2 界面，沿用现有 C# 本地功�
 - 程序未使用商业签名证书；首次运行请核对来源及 `SHA256SUMS.txt`。
 
 用户界面资源已嵌入 EXE，不从 CDN 或网站加载页面、字体或脚本，不需要配置服务器。WebView2 采用单独的本地资料目录；不会读取浏览器 Cookie。JS 下载仍由本地下载组件完成。
+
+蓝色盒子 Logo 保留；功能图标仅打包实际使用的 Lucide SVG，随程序离线加载。完整上游许可证位于 `Licenses\Lucide.LICENSE.txt`。
 
 ## 默认路径与原有数据
 
@@ -90,10 +92,10 @@ node scripts/check-native-bridge.mjs
 ## 本次验证范围
 
 - 103 项核心断言通过：真实临时 Git/npm 打包、同名产物、失败/取消回滚、安装与备份恢复、校验、下载限制、页面来源、操作白名单和参数校验。
-- 53 项 Chrome 界面断言通过，实际检查 1120/760/480 像素宽度的渲染、来源切换、搜索、编辑、纯文字显示、忙碌状态、停止与空历史；已人工查看截图。
+- 62 项 Chrome 界面断言通过，实际检查 1120/760/480 像素宽度的渲染、来源切换、功能图标实际绘制、搜索、编辑、纯文字显示、忙碌状态、停止与空历史；已人工查看截图。
 - 24 项动画与下拉断言通过，覆盖展开与关闭、快速切换、键盘选中、焦点恢复、窄窗口菜单和减少动态效果。
 - 另有 7 项模拟本地消息通道的浏览器契约检查，验证 UUID 请求、配置读取、目录回填和下载参数；这不是 Windows 原生桥接执行结果。
-- Windows x64 交叉编译通过；程序资源、DLL、微软安装程序和压缩包会核对 SHA-256。
+- Windows x64 交叉编译通过；从最终 EXE 解包并核对内嵌页面、样式、动画、Logo 和图标，确保与当前源码及 Mac 应用内的同名资源字节一致；程序、DLL、微软安装程序和压缩包另核对 SHA-256。
 - 当前 Mac 无法运行 Windows WebView2，本轮尚无真实 Windows 消息桥接、运行环境安装和 AdsPower 实机验证结果。随包提供 `--web-check` 模式，可在 Windows 上检查并保存截图；浏览器预览测试不能代替这一步。
 
 ```powershell
@@ -101,4 +103,4 @@ $process = Start-Process .\AdsWorkJsManager.exe -ArgumentList '--web-check' -Wai
 $process.ExitCode
 ```
 
-独立检查报告在 `%TEMP%\AdsWork-WebUI-*`。本包包含 .NET、Windows Desktop、Acornima 和 WebView2 SDK 许可证。
+独立检查报告在 `%TEMP%\AdsWork-WebUI-*`。本包包含 .NET、Windows Desktop、Acornima、WebView2 SDK 和 Lucide 许可证。

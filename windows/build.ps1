@@ -30,6 +30,7 @@ try {
     }
     Copy-Item 'README.md' $packageDir
     Copy-Item 'Licenses' $packageDir -Recurse
+    Copy-Item '..\Shared\WebUI\lucide.LICENSE.txt' (Join-Path $packageDir 'Licenses\Lucide.LICENSE.txt')
     $sums = @('AdsWorkJsManager.exe', 'WebView2Loader.dll', 'MicrosoftEdgeWebview2Setup.exe') | ForEach-Object {
         $hash = (Get-FileHash (Join-Path $packageDir $_) -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $_"

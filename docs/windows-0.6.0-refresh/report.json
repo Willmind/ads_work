@@ -1,0 +1,81 @@
+{
+  "build": {
+    "builtAt": "2026-10-16T17:05:46+08:00",
+    "version": "0.6.0",
+    "sdk": "10.0.402",
+    "target": "win-x64",
+    "coreChecks": {
+      "passed": true,
+      "checks": 103
+    },
+    "bundle": {
+      "windowsX64": true,
+      "guiSubsystem": true,
+      "bundleVersion": "6.0",
+      "bundleEntries": 260,
+      "selfContainedFrameworks": [
+        {
+          "name": "Microsoft.NETCore.App",
+          "version": "10.0.13"
+        },
+        {
+          "name": "Microsoft.WindowsDesktop.App",
+          "version": "10.0.13"
+        }
+      ],
+      "assemblyMatchesCompiledOutput": true,
+      "exeSha256": "2c73b6745c437c2a79fa878636cb34c4022c68b1d33351f0775d4836b5a4d2ac",
+      "bundledAssemblySha256": "c820c80bd78a5a363f58cb272cfebe2da3c4986fcb605defa99ce6caee678ec0"
+    },
+    "sharedResources": {
+      "passed": true,
+      "resourceCount": 9,
+      "sourceAndMacMatch": true,
+      "version": "0.6.0.0",
+      "sha256": {
+        "app.js": "1f74694ac7efc1635579575eb05806871f24175d632714f718708cc3ae3a717e",
+        "bridge.js": "32994720596f9b163485f388422493672d3ebe3ad8b848ca30ed966b6a0f8d43",
+        "icons.svg": "77c787e4aaa20f9a1a0453425026b41bef5480edecaf6f9942ad7b88eb264081",
+        "index.html": "fe8a73c616a47aa2e4992b7bb68e666d6885f4a6ec13df90ba4b26e2b69e7d77",
+        "logo.svg": "3477fe88c4a08d53e4efdc7364802d0b2ffe39a6f8feac34dce12460ac858f21",
+        "lucide.LICENSE.txt": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+        "motion.js": "150949071b980d48588e0b07c8ee2c76065b09da7cc08c6e49f5df4bb59981f3",
+        "preview.js": "280415c29852d155ff2ad32128fb142286af1ebb6f77ac3629d2ed02537eb21f",
+        "styles.css": "420fdd4c15ee5ae0b0296bcf0a29384368a579b87563bd0c1765fd143e9bc96d"
+      },
+      "scope": "Statically inspect resources in DLL extracted from final Windows EXE; no Windows application code executed."
+    },
+    "uiVerification": {
+      "reference": "docs/ui-lucide/report.json",
+      "checks": {
+        "localBrowser": 62,
+        "motionBrowser": 24
+      },
+      "note": "Current shared resources match the previously verified UI sources; browser checks do not replace Windows WebView2 execution."
+    },
+    "windowsWebView2RuntimeTested": false,
+    "serverManagementIncluded": false
+  },
+  "zip": {
+    "name": "AdsWork-JS-Manager-Windows-x64-0.6.0.zip",
+    "bytes": 48519062,
+    "sha256": "d584b500be356bd609126782eff73f2a935d69b060c8ccdd7f843f10b63a9eac",
+    "fileCount": 12,
+    "roundTripVerified": true
+  },
+  "packageFiles": {
+    "AdsWorkJsManager.exe": "2c73b6745c437c2a79fa878636cb34c4022c68b1d33351f0775d4836b5a4d2ac",
+    "BUILD-INFO.json": "f6834792faff358e43168a9449ada04cf0a763e95d03c8aa75edd984d53758aa",
+    "Licenses/Acornima.LICENSE.txt": "4182d3e7ce42f69b01f35c6ed27d075d26794a3c2f0b0182aa475be6ca565bab",
+    "Licenses/DOTNET.LICENSE.txt": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+    "Licenses/DOTNET.THIRD-PARTY-NOTICES.TXT": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21",
+    "Licenses/Lucide.LICENSE.txt": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+    "Licenses/WebView2.LICENSE.txt": "0af8f1b807512aae39c2ac1aa4d0cae65cabecb6fd554b8439a5162a0d6eca55",
+    "Licenses/WindowsDesktop.LICENSE.txt": "a89886665765362eb77e0f8e26602c924520041d1711b2eedc136434fe4d01ab",
+    "MicrosoftEdgeWebview2Setup.exe": "baa78c71c5615533a1ee0c4d2ca2ea3fd24dae01965f9033ac530a61b5aa93a0",
+    "README.md": "f95f7052d3bce30578d8e6735671ef06caddead736f0d7511990e7aade41dc59",
+    "SHA256SUMS.txt": "1a010ebebad46b61d30152ee8b78e3bb713c2d3ed8bb1cdcc256384882dc7924",
+    "WebView2Loader.dll": "3426dcc55fdfb8b5e7ac623cf33b4ccf283fbf68a0c5a65bddfdb4d749a8abee"
+  },
+  "scope": "Windows x64 交叉编译；从最终 EXE 解包，核对内嵌页面、样式、图标等 9 项资源与当前 Mac 应用一致；未执行 Windows WebView2 实机测试。"
+}

@@ -24,65 +24,22 @@ struct LocalWebView: NSViewRepresentable {
 }
 
 @MainActor
-final class MacWebBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
+final class MacWebBridge: MacWebChannel {
     let model: LocalBuildModel
     private let remoteBusy: () -> Bool
-    private weak var webView: WKWebView?
-    private var subscriptions = Set<AnyCancellable>()
     private var lastSelection: UUID?
-    private var hasRetriedContentProcess = false
-    private let allowed: Set<String> = ["state", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"]
+    private static let actions: Set<String> = ["state", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"]
 
     init(model: LocalBuildModel, remoteBusy: @escaping () -> Bool = { false }) {
         self.model = model; self.remoteBusy = remoteBusy
-        super.init()
+        super.init(page: MacWebAssets.page, allowed: Self.actions)
         observe(model)
     }
 
-    func makeWebView(assets: URL) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
-        configuration.setURLSchemeHandler(MacWebAssets(root: assets), forURLScheme: "adswork")
-        configuration.userContentController.add(self, name: "adswork")
-        let view = WKWebView(frame: .zero, configuration: configuration)
-        view.navigationDelegate = self; view.uiDelegate = self
-        webView = view
-        view.load(URLRequest(url: MacWebAssets.page))
-        return view
-    }
+    override func stopOperation() { if model.isRunning { model.stop() } }
 
-    func observe<T: ObservableObject>(_ source: T) where T.ObjectWillChangePublisher == ObservableObjectPublisher {
-        source.objectWillChange
-            .throttle(for: .milliseconds(80), scheduler: RunLoop.main, latest: true)
-            .sink { [weak self] in
-                DispatchQueue.main.async { self?.publish() }
-            }.store(in: &subscriptions)
-    }
-
-    func detach() {
-        if model.isRunning { model.stop() }
-        subscriptions.removeAll()
-        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "adswork")
-        webView?.navigationDelegate = nil; webView?.uiDelegate = nil
-    }
-
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.frameInfo.isMainFrame, message.frameInfo.request.url == MacWebAssets.page,
-              let object = message.body as? [String: Any], JSONSerialization.isValidJSONObject(object),
-              let data = try? JSONSerialization.data(withJSONObject: object), data.count <= 65536,
-              let id = object["id"] as? String, UUID(uuidString: id) != nil,
-              let action = object["action"] as? String, allowed.contains(action),
-              let args = object["args"] as? [String: Any] else { return }
-        do {
-            let result = try handle(action, args: args)
-            send(["id": id, "ok": true, "data": result])
-        } catch {
-            send(["id": id, "ok": false, "error": error.localizedDescription])
-        }
-    }
-
-    func handle(_ action: String, args: [String: Any]) throws -> [String: Any] {
-        guard allowed.contains(action) else { throw LocalBuildError.message("不支持的本地操作。") }
+    override func handle(_ action: String, args: [String: Any]) throws -> [String: Any] {
+        guard Self.actions.contains(action) else { throw LocalBuildError.message("不支持的本地操作。") }
         if action == "state" { model.refresh(); return ["snapshot": snapshot()] }
         if action == "cancel" { model.stop(); return ["snapshot": snapshot()] }
         if action == "copyLog" { model.copyLog(); return ["message": "日志已复制"] }
@@ -114,18 +71,12 @@ final class MacWebBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
         return ["snapshot": snapshot()]
     }
 
-    private func text(_ args: [String: Any], _ key: String, limit: Int = 4000) throws -> String {
-        guard let value = args[key] else { return "" }
-        guard let text = value as? String, text.count <= limit else { throw LocalBuildError.message("请求参数类型或长度无效。") }
-        return text
-    }
-
     private func identifier(_ args: [String: Any]) throws -> UUID {
         guard let id = UUID(uuidString: try text(args, "id", limit: 36)) else { throw LocalBuildError.message("记录 ID 无效。") }
         return id
     }
 
-    func snapshot() -> [String: Any] {
+    override func snapshot() -> [String: Any] {
         let formatter = ISO8601DateFormatter()
         let records: [[String: Any]] = model.records.map { record in
             ["id": record.id.uuidString.lowercased(), "fileName": record.filename, "version": record.version,
@@ -156,34 +107,4 @@ final class MacWebBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate
                 "logs": model.logText, "operation": operation, "selectedId": preferred]
     }
 
-    private func publish() { send(["type": "event", "event": "state", "data": snapshot()]) }
-
-    private func send(_ message: [String: Any]) {
-        guard let view = webView, view.url == MacWebAssets.page, JSONSerialization.isValidJSONObject(message),
-              let data = try? JSONSerialization.data(withJSONObject: message), let json = String(data: data, encoding: .utf8) else { return }
-        view.evaluateJavaScript("window.__adsWorkReceive && window.__adsWorkReceive(\(json))") { _, error in
-            if let error { NSLog("本地界面消息发送失败：%@", error.localizedDescription) }
-        }
-    }
-
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
-                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        decisionHandler(navigationAction.targetFrame?.isMainFrame == true && navigationAction.request.url == MacWebAssets.page ? .allow : .cancel)
-    }
-
-    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
-                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? { nil }
-
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        model.stop()
-        guard !hasRetriedContentProcess else {
-            let alert = NSAlert()
-            alert.messageText = "本地界面暂时无法加载"
-            alert.informativeText = "系统网页进程已退出，请关闭工具后重新打开。已有 JS 记录和备份仍保存在本机。"
-            if let window = webView.window { alert.beginSheetModal(for: window) }
-            return
-        }
-        hasRetriedContentProcess = true
-        webView.reload()
-    }
 }

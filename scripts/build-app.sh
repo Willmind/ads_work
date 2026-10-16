@@ -31,6 +31,7 @@ cp "$PROJECT_DIR/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
 cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
 
 cp -R "$PROJECT_DIR/Shared/WebUI" "$APP_DIR/Contents/Resources/WebUI"
+cp "$PROJECT_DIR/Resources/ServerUI/"* "$APP_DIR/Contents/Resources/WebUI/"
 
 chmod 755 "$APP_DIR/Contents/MacOS/$EXECUTABLE_NAME"
 codesign --force --deep --sign - "$APP_DIR"

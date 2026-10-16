@@ -1,0 +1,5 @@
+{
+  "checks": 54,
+  "failures": [],
+  "scope": "Chrome 中的服务器 HTML、宽窄窗口、分支弹窗与消息参数，全部模拟数据；真实 Mac 桥接另由 remote-web-check 验证"
+}

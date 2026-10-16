@@ -99,7 +99,9 @@ Mac 的 JS 本地管理改用与 Windows 相同的 HTML 页面，统一圆角卡
 
 两端只维护 `Shared/WebUI` 一份页面。页面随应用打包，不从网络加载 UI 资源；本地消息接口限制固定页面来源及操作白名单，不提供任意命令执行接口。Mac 使用系统自带 WebKit，无需 Electron 或额外安装网页运行环境。Windows 继续使用 WebView2。
 
-Mac 的路径配置、本地历史和备份沿用原存储位置；服务器分支管理保留原有 SwiftUI，入口位于窗口顶部工作区切换。新版包为 `dist/Mix Web 部署工具-0.6.0.zip`（Apple Silicon）。
+功能图标统一使用 Lucide（`lucide-static` 1.58.0），仅将实际使用的 19 个 SVG 收录到共用的 `Shared/WebUI/icons.svg`，两页按需引用同一份资源。统一使用 24 × 24 画布、2 单位笔画和圆角端点，常规显示尺寸为 16px；装饰图标不重复进入屏幕阅读器。蓝色盒子 Logo 保留。上游完整许可证见 `Shared/WebUI/lucide.LICENSE.txt`，随 Mac 应用资源分发，Windows 构建时同时复制到包内 `Licenses` 目录。图标无需联网或额外的运行时依赖。
+
+Mac 的路径配置、本地历史和备份沿用原存储位置；服务器分支管理也使用 HTML，复用同一套样式与动画，入口位于窗口顶部工作区切换。连接表单自动保存、分支搜索弹窗、运行阶段和脱敏日志继续调用原有 Swift 核心；切换并拉取保留原生确认弹窗。该页面只包含在 Mac 版，Windows 仍仅提供 JS 本地管理。新版包为 `dist/Mix Web 部署工具-0.6.0.zip`（Apple Silicon）。
 
 ## 本地验证
 
@@ -121,3 +123,6 @@ zsh scripts/check-web.sh
 ```
 
 它使用真实 WKWebView 和临时 JS 库，检查路径读取、来源切换、备注持久化、安装备份、恢复、下拉选择、宽窄窗口、箭头对齐和导航限制，输出 `.build/mac-web-report` 中的截图与报告，不修改实际 AdsPower 文件。界面与动画检查及本轮结果见 [0.6.0 验证记录](docs/ui-0.6.0/README.md)。
+
+
+服务器页面离线验证：`zsh scripts/check-remote-web.sh`。使用真实 WKWebView、内存配置、临时假 PEM 与 Expect 模拟服务器，检查配置保存、分支搜索回填、确认入口、加载、停止和日志；不连接真实服务器。截图和报告位于 `.build/remote-web-report`。

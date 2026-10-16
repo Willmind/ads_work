@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-16",
+  "icons": {
+    "library": "lucide-static",
+    "version": "1.58.0",
+    "source": "https://registry.npmjs.org/lucide-static/-/lucide-static-1.58.0.tgz",
+    "integrity": "sha512-VFE2ZEq3yEwjBH0El9CA9lHgDWKKXPKgKxFzX+/JN1FPa4maQbtl/pT4B62aJkUEpODT5octDsyGy7tPVE2svQ==",
+    "names": [
+      "folder",
+      "file-plus-2",
+      "layers",
+      "search",
+      "refresh-cw",
+      "package",
+      "download",
+      "archive-restore",
+      "chevron-right",
+      "file-text",
+      "folder-open",
+      "hard-drive-download",
+      "file-input",
+      "server",
+      "git-branch",
+      "square-terminal",
+      "plug",
+      "x",
+      "arrow-right"
+    ],
+    "upstreamGeometryUnchanged": true,
+    "originalLicenseRetained": true,
+    "spriteSha256": "77c787e4aaa20f9a1a0453425026b41bef5480edecaf6f9942ad7b88eb264081",
+    "licenseSha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+  },
+  "browser": {
+    "local": {
+      "checks": 62,
+      "failures": [],
+      "scope": "Chrome HTML/CSS 渲染、交互与响应式布局；不替代 Windows WebView2 实机验证"
+    },
+    "server": {
+      "checks": 57,
+      "failures": [],
+      "scope": "Chrome 中的服务器 HTML、宽窄窗口、分支弹窗与消息参数，全部模拟数据；真实 Mac 桥接另由 remote-web-check 验证"
+    },
+    "motion": {
+      "checks": 24,
+      "failures": [],
+      "scope": "真实浏览器动画、快速切换、键盘下拉、窄窗口与减少动态效果；本地通道使用模拟数据"
+    }
+  },
+  "native": {
+    "local": {
+      "failures": [],
+      "checks": 23,
+      "scope": "真实 Mac WKWebView、页面消息桥接、临时目录安装与恢复；不接触用户 AdsPower 文件",
+      "reducedMotionEmulation": true
+    },
+    "server": {
+      "scope": "真实 WKWebView 与原 AppModel；内存配置、虚构地址、临时假 PEM、离线 Expect 模拟器；无真实 SSH、远程 Git 或后台请求",
+      "checks": 25,
+      "failures": [],
+      "reducedMotionEmulation": true
+    }
+  },
+  "packaging": {
+    "macBuild": "passed",
+    "adHocSignature": "passed",
+    "zipRoundTrip": "passed",
+    "bundleAssetFiles": 12,
+    "zipSha256": "f438eb74858ac34eebaee5786a5581e26bd11f5be96bb6d7d10ef50a9728ce9f"
+  },
+  "scope": "仅本地图标资源、界面与 Mac 包更新；不提交或同步 GitHub，不操作真实 AdsPower 文件，不连接真实服务器。",
+  "limitations": [
+    "Mac 原生测试宿主会被系统标记为隐藏；原生检查使用临时资源模拟减少动态效果，交付资源保留原有动画。正常动画由 Chrome 检查覆盖。",
+    "Windows 源码及后续构建时的图标检查、许可证打包已更新；本次未重新生成或实测 Windows 可执行包。"
+  ]
+}

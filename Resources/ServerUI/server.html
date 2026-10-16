@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <title>服务器分支管理</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="server.css">
+  <script type="module" src="server.js"></script>
+</head>
+<body>
+<header class="app-header"><div class="header-inner"><div class="brand"><img src="logo.svg" alt="" width="36" height="36"><div><h1>服务器分支管理</h1><p>连接服务器、选择分支、切换与拉取</p></div></div><span id="remoteStatus" class="local-badge">等待操作</span></div></header>
+<main class="workspace remote-workspace">
+  <section aria-labelledby="connectionTitle">
+    <div class="section-heading"><h2 id="connectionTitle"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#server"/></svg>连接设置</h2><span class="heading-hint">私钥仅保留文件路径，不会复制进应用</span></div>
+    <details id="connectionDisclosure" class="card disclosure-card" open>
+      <summary><span><svg class="icon chevron" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#chevron-right"/></svg><span id="connectionSummary">请完善连接配置</span></span><span class="connection-edit">展开 / 收起</span></summary>
+      <div class="disclosure-content remote-form">
+        <div class="host-row"><label for="host">SSH 主机</label><input id="host" type="text" autocomplete="off" spellcheck="false" placeholder="jumpserver.example.com"><label for="port">端口</label><input id="port" type="text" inputmode="numeric" maxlength="5"></div>
+        <div class="path-row"><label for="username">SSH 用户</label><input id="username" type="text" autocomplete="off" spellcheck="false" placeholder="个人 SSH 用户名"></div>
+        <div class="path-row"><label for="privateKeyPath">PEM 私钥</label><input id="privateKeyPath" type="text" autocomplete="off" spellcheck="false" placeholder="选择自己的 PEM 私钥文件"><button type="button" data-action="choosePrivateKey">选择…</button></div>
+        <div class="path-row"><label for="projectPath">项目目录</label><input id="projectPath" type="text" autocomplete="off" spellcheck="false" placeholder="/path/to/project"></div>
+        <div class="path-row menu-row"><label for="firstMenuChoice">菜单选项</label><input id="firstMenuChoice" type="text" maxlength="100" aria-label="第一次菜单选择"><svg class="icon menu-arrow" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#arrow-right"/></svg><input id="secondMenuChoice" type="text" maxlength="100" aria-label="第二次菜单选择"><span class="helper">对应 Jumpserver 的两次选择</span></div>
+        <p class="helper form-footer">配置自动保存在本机，更新应用后继续保留。</p>
+      </div>
+    </details>
+  </section>
+  <section aria-labelledby="deployTitle">
+    <div class="section-heading"><h2 id="deployTitle"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#git-branch"/></svg>部署操作</h2></div>
+    <div class="card deploy-card">
+      <div class="path-row branch-row"><label for="branch">目标分支</label><input id="branch" type="text" spellcheck="false" autocomplete="off" placeholder="输入目标分支，例如 develop"><button id="openBranches" type="button"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#search"/></svg>选择分支</button></div>
+      <div class="action-row"><div class="remote-actions"><button type="button" data-action="test"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#plug"/></svg>检查连接</button><button type="button" data-action="branches"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#refresh-cw"/></svg>刷新分支</button><button type="button" data-action="syncBranches"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#download"/></svg>同步远程</button></div><div class="button-group"><button id="cancel" type="button" class="danger" data-action="cancel" hidden>停止</button><button id="deploy" type="button" class="primary" data-action="deploy"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#download"/></svg>切换并拉取</button></div></div>
+      <p id="branchListMessage" class="helper">快速刷新读取服务器已有记录；新建分支请点“同步远程”</p>
+    </div>
+  </section>
+  <section id="progressSection" class="card progress-card" aria-live="polite" hidden>
+    <div id="operationCard" class="operation-card"><div class="operation-icon"></div><div class="operation-copy"><strong id="stage"></strong><p id="status"></p><p id="resultSummary" hidden></p></div></div>
+    <ol id="stages" class="stage-list"></ol>
+  </section>
+  <section aria-labelledby="logTitle">
+    <div class="section-heading log-heading"><h2 id="logTitle"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#square-terminal"/></svg>执行日志</h2><div class="log-tools"><span class="heading-hint">连接信息已隐藏</span><button type="button" data-action="copyLog">复制脱敏日志</button><button type="button" data-action="clearLog" class="text-button">清空</button></div></div>
+    <div class="card"><pre id="log" class="server-log">执行日志会显示在这里。</pre></div>
+  </section>
+  <footer>连接配置仅保存在本机，执行日志已脱敏。<span class="version">0.6.0</span></footer>
+</main>
+<dialog id="branchDialog" class="branch-dialog" aria-labelledby="branchDialogTitle">
+  <div class="dialog-heading"><div><h2 id="branchDialogTitle">选择服务器分支</h2><p class="helper">搜索已有分支，或先加载服务器列表。</p></div><button id="closeBranches" type="button" class="dialog-close text-button" aria-label="关闭分支选择"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#x"/></svg></button></div>
+  <div class="search-field"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#search"/></svg><input id="branchSearch" type="search" aria-label="搜索远程分支" placeholder="搜索分支名称…" autocomplete="off" spellcheck="false"></div>
+  <div class="branch-meta"><span id="branchCount">0 个分支</span><span id="branchStatus"></span></div>
+  <div id="branchEmpty" class="branch-empty">暂无分支列表，请点击下方“加载分支”。</div>
+  <div id="branchResults" class="branch-results" role="group" aria-label="远程分支列表"></div>
+  <div class="dialog-actions"><span class="helper">操作完成后即可选择分支</span><div class="button-group"><button type="button" data-action="branches">加载分支</button><button type="button" data-action="syncBranches">同步远程</button><button id="dialogCancel" type="button" data-action="cancel" class="danger" hidden>停止</button></div></div>
+</dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body></html>

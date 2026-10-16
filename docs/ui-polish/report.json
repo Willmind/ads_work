@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-16",
+  "sourceChanges": [
+    "Shared/WebUI/index.html",
+    "Shared/WebUI/styles.css",
+    "Resources/ServerUI/server.html",
+    "Resources/ServerUI/server.css"
+  ],
+  "browser": {
+    "local": {
+      "checks": 53,
+      "failures": [],
+      "scope": "Chrome HTML/CSS 渲染、交互与响应式布局；不替代 Windows WebView2 实机验证"
+    },
+    "server": {
+      "checks": 54,
+      "failures": [],
+      "scope": "Chrome 中的服务器 HTML、宽窄窗口、分支弹窗与消息参数，全部模拟数据；真实 Mac 桥接另由 remote-web-check 验证"
+    },
+    "motion": {
+      "checks": 24,
+      "failures": [],
+      "scope": "Chrome 中检查折叠、切换、菜单动画与键盘交互"
+    }
+  },
+  "native": {
+    "local": {
+      "failures": [],
+      "scope": "真实 Mac WKWebView、页面消息桥接、临时目录安装与恢复；不接触用户 AdsPower 文件",
+      "checks": 21,
+      "reducedMotionEmulation": true
+    },
+    "server": {
+      "checks": 23,
+      "failures": [],
+      "scope": "真实 WKWebView 与原 AppModel；内存配置、虚构地址、临时假 PEM、离线 Expect 模拟器；无真实 SSH、远程 Git 或后台请求",
+      "reducedMotionEmulation": true
+    }
+  },
+  "packaging": {
+    "macBuild": "passed",
+    "adHocSignature": "passed",
+    "zipRoundTrip": "passed",
+    "bundleAssets": 10
+  },
+  "scope": "仅本地 UI 与 Mac 包更新；不提交或同步 GitHub，不连接真实服务器，不接触用户 AdsPower lib。",
+  "limitations": [
+    "本机原生测试宿主被系统标记为 document.visibilityState=hidden，默认动画时间轴暂停。原生完整交互检查在临时资源中模拟“减少动态效果”；交付资源保留正常动画，正常动画另在 Chrome 中检查。",
+    "Windows 共享 HTML/CSS 已更新；此次未重新生成 Windows 可执行包。"
+  ],
+  "zipSha256": "cc02d965f91d7cee691e7c43e7a44581050546a0139c8accf2c64c452d24238c"
+}
