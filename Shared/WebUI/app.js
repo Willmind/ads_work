@@ -1,5 +1,5 @@
 import { connect, request, subscribe } from './bridge.js';
-import { entrance, resizeCard, dismiss, showToast, installDisclosures, createTabs, createBackupPicker } from './motion.js';
+import { entrance, resizeCard, dismiss, showToast, installDisclosures, createTabs, createBackupPicker, refreshFeedback } from './motion.js';
 import { createBuildDirectory } from './build-directory.js';
 const $ = selector => document.querySelector(selector);
 let state = { records: [], backups: [], busy: false, logs: '', operation: null };
@@ -12,7 +12,7 @@ const moveTabIndicator = createTabs(document.querySelector('.segmented'));
 const backupPicker = createBackupPicker(document.querySelector('#backups'));
 const inputs = ['libraryPath', 'projectPath', 'newNote', 'downloadUrl', 'downloadMd5', 'editVersion', 'editNote'];
 const date = value => new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
-const buildDirectory = createBuildDirectory({ getProjectPath: () => $('#projectPath').value, isBusy: () => state.busy, formatDate: date });
+const buildDirectory = createBuildDirectory({ getProjectPath: () => $('#projectPath').value, isBusy: () => state.busy, formatDate: date, notify: toast });
 function settings() { return { projectPath: $('#projectPath').value.trim(), libraryPath: $('#libraryPath').value.trim() }; }
 function filtered() {
   const keywords = $('#search').value.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -107,7 +107,7 @@ function renderOperation() {
 function setBusy() {
   for (const button of document.querySelectorAll('button')) {
     if (button.dataset.action === 'cancel') { button.disabled = !!state.stopping; continue; }
-    button.disabled = state.busy;
+    button.disabled = state.busy || button.dataset.refreshing === 'true';
   }
   for (const id of inputs) $(`#${id}`).disabled = state.busy;
   $('#backups').disabled = state.busy;
@@ -150,7 +150,10 @@ async function action(name) {
     if (result?.message) toast(result.message);
   } catch (error) { toast(error.message); }
 }
-for (const button of document.querySelectorAll('[data-action]')) button.addEventListener('click', () => { void action(button.dataset.action); });
+for (const button of document.querySelectorAll('[data-action]')) button.addEventListener('click', () => {
+  if (button.hasAttribute('data-refresh')) void refreshFeedback(button, () => action(button.dataset.action), setBusy);
+  else void action(button.dataset.action);
+});
 for (const button of document.querySelectorAll('[data-mode]')) {
   button.addEventListener('click', () => setMode(button.dataset.mode));
   button.addEventListener('keydown', event => {

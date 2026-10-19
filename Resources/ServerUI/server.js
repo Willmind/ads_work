@@ -1,10 +1,11 @@
 import { connect, request, subscribe } from './bridge.js';
-import { entrance, installDisclosures, showToast, dismiss } from './motion.js';
+import { entrance, installDisclosures, showToast, dismiss, refreshFeedback } from './motion.js';
 const $ = selector => document.querySelector(selector);
 const keys = ['host', 'port', 'username', 'privateKeyPath', 'projectPath', 'firstMenuChoice', 'secondMenuChoice', 'branch'];
 let state;
 let initialized = false;
 let toastTimer;
+let branchRefreshDone;
 let dialogClosing = false;
 installDisclosures();
 const connection = $('#connectionDisclosure');
@@ -17,6 +18,7 @@ function applyState(next, force = false) {
   if (!next) return;
   const previous = state?.settings;
   state = next;
+  if (!state.busy) { branchRefreshDone?.(); branchRefreshDone = undefined; }
   for (const key of keys) {
     const input = $(`#${key}`);
     if (!initialized || force || (document.activeElement !== input && input.value === previous?.[key])) input.value = next.settings[key];
@@ -31,7 +33,7 @@ function applyState(next, force = false) {
   for (const input of document.querySelectorAll('.remote-form input, #branch')) input.disabled = next.busy;
   for (const button of document.querySelectorAll('[data-action]')) {
     const action = button.dataset.action;
-    button.disabled = action === 'cancel' ? next.stopping || !next.busy : action === 'copyLog' ? !next.logs : next.busy;
+    button.disabled = button.dataset.refreshing === 'true' || (action === 'cancel' ? next.stopping || !next.busy : action === 'copyLog' ? !next.logs : next.busy);
   }
   $('#openBranches').disabled = next.localBusy;
   $('#deploy').disabled = next.busy || !$('#branch').value.trim();
@@ -78,7 +80,7 @@ function renderBranches() {
   for (const branch of branches.slice(0, 200)) {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'branch-option';
     button.textContent = branch; button.setAttribute('aria-current', String(branch === state.settings.branch));
-    button.disabled = state.busy; button.addEventListener('click', () => { void action('selectBranch', { branch }); });
+    button.disabled = button.dataset.refreshing === 'true' || state.busy; button.addEventListener('click', () => { void action('selectBranch', { branch }); });
     results.append(button);
   }
 }
@@ -109,7 +111,13 @@ function closeBranches() {
   const animation = dialog.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(5px)' }], { duration: 140, easing: 'ease-out' });
   animation.onfinish = finish;
 }
-for (const button of document.querySelectorAll('[data-action]')) button.addEventListener('click', () => { void action(button.dataset.action); });
+for (const button of document.querySelectorAll('[data-action]')) button.addEventListener('click', () => {
+  if (button.hasAttribute('data-refresh')) void refreshFeedback(button, async () => {
+    await action(button.dataset.action);
+    if (state.busy) await new Promise(resolve => { branchRefreshDone = resolve; });
+  }, () => applyState(state));
+  else void action(button.dataset.action);
+});
 for (const key of keys) {
   const input = $(`#${key}`); input.maxLength = key === 'port' ? 5 : ['firstMenuChoice', 'secondMenuChoice'].includes(key) ? 100 : 4000;
   input.addEventListener('input', () => { void action('saveSettings'); });

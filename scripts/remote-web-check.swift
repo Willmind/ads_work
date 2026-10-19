@@ -75,7 +75,10 @@ struct RemoteWebCheck {
                 try check(!model.logText.contains(settings.host) && !model.logText.contains(settings.username) && !model.logText.contains("mock-private-banner"), "日志保持脱敏且隐藏横幅")
                 _ = try await js("document.querySelector('#branch').value='';document.querySelector('#branch').dispatchEvent(new Event('change'));document.querySelector('[data-action=branches]').click()")
                 try await wait { model.isRunning }
+                try check((try await js("document.querySelector('[data-refresh]').dataset.refreshing==='true'")) as? Bool == true, "原生刷新分支期间保持按钮反馈")
                 try await wait { !model.isRunning && model.branches.count == 3 }
+                try await wait { (try await js("!document.querySelector('[data-refresh]').dataset.refreshing")) as? Bool == true }
+                try check((try await js("!document.querySelector('[data-refresh]').disabled")) as? Bool == true, "原生刷新实际完成后恢复按钮")
                 try await wait { (try await js("document.querySelector('#branchListMessage').textContent.includes('3 个分支')")) as? Bool == true }
                 try check((try await js("document.querySelector('#branch').value")) as? String == model.settings.branch, "加载后自动选中的分支同步回填")
                 _ = try await js("document.querySelector('#openBranches').click();document.querySelector('#branchSearch').value='login';document.querySelector('#branchSearch').dispatchEvent(new Event('input'))")

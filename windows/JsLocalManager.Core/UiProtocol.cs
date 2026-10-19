@@ -8,7 +8,7 @@ public static class UiProtocol
 {
     public const string Page = "https://adswork.local/index.html";
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private static readonly HashSet<string> Actions = ["state", "buildFiles", "clearBuild", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"];
+    private static readonly HashSet<string> Actions = ["state", "buildFiles", "copyBuildFile", "clearBuild", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"];
 
     public static UiRequest Parse(string origin, string json)
     {

@@ -48,12 +48,19 @@ class MacWebChannel: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKU
               let id = object["id"] as? String, UUID(uuidString: id) != nil,
               let action = object["action"] as? String, allowed.contains(action),
               let args = object["args"] as? [String: Any] else { return }
-        do {
-            let result = try handle(action, args: args)
-            send(["id": id, "ok": true, "data": result])
-        } catch {
-            send(["id": id, "ok": false, "error": error.localizedDescription])
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await handleAsync(action, args: args)
+                send(["id": id, "ok": true, "data": result])
+            } catch {
+                send(["id": id, "ok": false, "error": error.localizedDescription])
+            }
         }
+    }
+
+    func handleAsync(_ action: String, args: [String: Any]) async throws -> [String: Any] {
+        try handle(action, args: args)
     }
 
     func handle(_ action: String, args: [String: Any]) throws -> [String: Any] {
@@ -69,7 +76,7 @@ class MacWebChannel: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKU
         return text
     }
 
-    private func publish() { send(["type": "event", "event": "state", "data": snapshot()]) }
+    func publish() { send(["type": "event", "event": "state", "data": snapshot()]) }
 
     private func send(_ message: [String: Any]) {
         guard let view = webView, view.url == page, JSONSerialization.isValidJSONObject(message),

@@ -64,6 +64,13 @@ try {
     });
     check(!layout.length, `表单及按钮布局 ${width}: ${layout}`);
     await page.screenshot({ path: path.join(output, `server-${width}.png`), fullPage: true });
+    const refresh = page.locator('[data-refresh]');
+    await refresh.click();
+    check(await refresh.evaluate(button => button.dataset.refreshing === 'true' && button.querySelector('svg').getAnimations().some(animation => animation.playState === 'running')), `服务器刷新立即旋转 ${width}`);
+    await page.waitForTimeout(600);
+    check(await refresh.evaluate(button => button.dataset.refreshing === 'true' && button.disabled), `服务器刷新等待实际操作完成 ${width}`);
+    await page.waitForFunction(() => !document.querySelector('[data-refresh]').dataset.refreshing);
+    check(await refresh.isEnabled(), `服务器刷新结束后恢复 ${width}`);
     await page.locator('#host').fill('updated.example.invalid'); await page.locator('#port').focus();
     await page.waitForTimeout(30);
     check(await page.evaluate(() => window.serverRequests.some(r => r.action === 'saveSettings' && r.args.settings.host === 'updated.example.invalid')), `字段自动保存 ${width}`);

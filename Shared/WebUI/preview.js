@@ -16,6 +16,7 @@ let state = {
 export function subscribe(listener) { listeners.add(listener); }
 function emit() { for (const listener of listeners) listener('state', structuredClone(state)); }
 export async function request(action, args = {}) {
+  if (action === 'copyBuildFile') return { copiedFile: args.fileName, message: '预览：文件复制演示完成，实际剪贴板未改动。' };
   if (action === 'buildFiles') return { buildDirectory: { path: `${args.projectPath}${args.projectPath.includes('\\') ? '\\' : '/'}build`, exists: true, entryCount: buildFiles.length, files: structuredClone(buildFiles) } };
   if (args.settings) state.settings = { ...args.settings };
   if (action === 'clearBuild') {

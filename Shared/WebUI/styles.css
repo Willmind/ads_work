@@ -6,6 +6,9 @@
   color-scheme: light;
   font-synthesis: none;
   --blue: #007aff;
+  --danger: #c9362b;
+  --danger-hover: #fff1ef;
+  --danger-pressed: #b82e24;
   --text: #26272b;
   --secondary: #737780;
   --muted: #8b8e96;
@@ -88,7 +91,12 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size
 .primary:hover:enabled { border-color: #0064d5; background: #006fe8; }
 .text-button { background: transparent; border-color: transparent; box-shadow: none; color: #0074e8; padding-left: 8px; padding-right: 8px; }
 .text-button:hover:enabled { background: #f0f6fd; border-color: transparent; }
-.danger { color: #bd5e52; border-color: #e6d4d0; background: #fffc; }
+.danger { color: var(--danger); border-color: var(--danger); background: #fff; box-shadow: none; }
+.danger:hover:enabled { color: var(--danger); border-color: var(--danger); background: var(--danger-hover); }
+.danger:active:enabled { color: #fff; border-color: var(--danger-pressed); background: var(--danger-pressed); }
+.danger:focus-visible { outline-color: #c9362b40; }
+button[data-refreshing=true] { cursor: progress; }
+button[data-refreshing=true]:disabled { opacity: .75; }
 
 /* Local JS form. */
 .source-top { display: flex; align-items: center; gap: var(--field-gap); margin-bottom: 16px; }
@@ -105,7 +113,7 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size
 .import-prompt .helper { margin: 4px 0 0; }
 .add-card > .action-row { justify-content: flex-end; }
 
-/* History uses one inset for search, table columns and selected details. */
+/* Current build files share the same insets as the history table. */
 .build-directory-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: var(--card-inset) var(--card-inset) 0; }
 .build-directory-toolbar > code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .build-directory-toolbar .button-group { flex-shrink: 0; }
@@ -113,11 +121,16 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size
 .field-error { color: #b35549; }
 .build-files-scroll { max-height: 200px; overflow: auto; }
 .build-files-table { min-width: 0; table-layout: fixed; }
-.build-files-table th:first-child, .build-files-table td:first-child { width: 58%; min-width: 0; font-weight: 400; }
-.build-files-table th:nth-child(2) { width: 17%; }
-.build-files-table th:last-child { width: 25%; }
+.build-files-table th:first-child, .build-files-table td:first-child { width: 46%; min-width: 0; font-weight: 400; }
+.build-files-table th:nth-child(2) { width: 15%; }
+.build-files-table th:nth-child(3) { width: 25%; }
+.build-files-table th:last-child { width: 14%; }
 .build-files-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .build-files-table tbody tr { cursor: default; }
+.build-files-table th:last-child, .build-files-table td:last-child { text-align: right; }
+.build-copy { width: 86px; padding: 5px 8px; font-size: 12px; }
+.build-files-table td:last-child { overflow: visible; }
+.build-copy .icon { width: 14px; height: 14px; }
 .build-files-empty { margin: 0; padding: 20px var(--card-inset); border-top: 1px solid #eceef1; font-size: 12px; color: var(--muted); }
 .build-files-table th, .build-files-table td { padding-left: 16px; padding-right: 16px; }
 .build-files-table th:first-child, .build-files-table td:first-child { padding-left: var(--card-inset); }
@@ -126,10 +139,13 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size
   .build-directory-toolbar { flex-wrap: wrap; }
   .build-directory-toolbar > code { flex-basis: 100%; }
   .build-directory-toolbar .button-group { margin-left: 0; }
-  .build-files-table th:first-child, .build-files-table td:first-child { width: 48%; }
-  .build-files-table th:nth-child(2) { width: 20%; }
-  .build-files-table th:last-child { width: 32%; }
+  .build-files-table th:first-child, .build-files-table td:first-child { width: auto; }
+  .build-files-table th:nth-child(2) { width: 70px; }
+  .build-files-table th:nth-child(3) { width: 94px; }
+  .build-files-table th:last-child { width: 108px; }
+  .build-files-table th, .build-files-table td { padding-left: 8px; padding-right: 8px; }
 }
+/* History uses one inset for search, table columns and selected details. */
 .count-badge { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .history-card { padding-top: var(--card-inset); }
 .search-row { display: flex; align-items: center; gap: 8px; padding: 0 var(--card-inset) 16px; }

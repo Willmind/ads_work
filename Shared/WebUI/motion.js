@@ -127,3 +127,31 @@ export function createBackupPicker(select) {
   }, true);
   return { refresh, close };
 }
+
+
+const refreshJobs = new WeakMap();
+export function refreshFeedback(button, operation, updateControls = () => {}) {
+  if (refreshJobs.has(button)) return refreshJobs.get(button);
+  button.dataset.refreshing = 'true'; button.setAttribute('aria-busy', 'true'); button.disabled = true;
+  const duration = 480;
+  const animation = reduced.matches ? undefined : button.querySelector('svg.icon')?.animate(
+    [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration, iterations: Infinity, easing: 'linear' });
+  const job = (async () => {
+    try { return await operation(); }
+    finally {
+      if (animation && !reduced.matches && !document.hidden) {
+        const turns = Math.max(1, Math.ceil(Number(animation.currentTime || 0) / duration));
+        animation.effect.updateTiming({ iterations: turns });
+        // Hidden native test hosts may stop advancing animation frames.
+        let timeout;
+        await Promise.race([animation.finished.then(() => true, () => false), new Promise(resolve => { timeout = setTimeout(resolve, duration + 100); })]);
+        clearTimeout(timeout);
+      }
+      animation?.cancel();
+      delete button.dataset.refreshing; button.removeAttribute('aria-busy');
+      refreshJobs.delete(button); button.disabled = false; updateControls();
+    }
+  })();
+  refreshJobs.set(button, job);
+  return job;
+}

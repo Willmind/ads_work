@@ -66,6 +66,24 @@ enum BuildDirectory {
         return BuildDirectorySnapshot(path: root.path, exists: true, entryCount: entries.count, files: files)
     }
 
+    static func file(in project: URL, name: String) throws -> URL {
+        let components = name.components(separatedBy: "/")
+        guard !name.contains("\0"), !name.contains("\\"), !components.isEmpty,
+              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." && !$0.hasPrefix(".ads-work-previous-") }),
+              (name as NSString).pathExtension.lowercased() == "js" else {
+            throw LocalBuildError.message("请选择 build 列表中的 JS 文件。")
+        }
+        var source = project.appendingPathComponent("build", isDirectory: true)
+        try requireDirectory(source)
+        for component in components.dropLast() { source.appendPathComponent(component, isDirectory: true); try requireDirectory(source) }
+        source.appendPathComponent(components.last!)
+        let values = try source.resourceValues(forKeys: keys)
+        guard values.isRegularFile == true, values.isSymbolicLink != true else {
+            throw LocalBuildError.message("JS 文件已变化或不是普通文件，请刷新后重试。")
+        }
+        return source
+    }
+
     static func clear(_ path: String, protecting paths: [String], cancellation: LocalBuildCancellation) throws -> Int {
         let project = try project(path)
         let lock = try BuildDirectoryLock(project: project)
@@ -102,7 +120,7 @@ enum BuildDirectory {
         return count
     }
 
-    private static func physicalPath(_ path: String) throws -> String {
+    static func physicalPath(_ path: String) throws -> String {
         let normalized = URL(fileURLWithPath: path).standardizedFileURL.path
         if let resolved = realpath(normalized, nil) {
             defer { free(resolved) }

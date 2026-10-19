@@ -36,6 +36,8 @@ internal static class Program
             Console.WriteLine("PASS 只读下载、跳转限制、MD5 与异常处理");
             await BuildDirectoryChecks();
             Console.WriteLine("PASS build 目录读取、清空边界与构建锁");
+            await BuildCopyChecks();
+            Console.WriteLine("PASS JS 文件副本、清空后粘贴与缓存清理");
             await BuildChecks();
             Console.WriteLine("PASS 真实 Git/npm 打包、同名产物与失败回滚");
             await ProcessChecks();
@@ -163,6 +165,68 @@ internal static class Program
             Directory.Delete(build);
         }
         await Reject(() => Task.FromResult(BuildDirectory.Read(Root)), "无效项目不允许操作");
+    }
+
+    private static async Task BuildCopyChecks()
+    {
+        var project = Folder("copy project");
+        await File.WriteAllTextAsync(Path.Combine(project, "package.json"), "{\"scripts\":{\"buildLb\":\"node fixture.js\"}}");
+        var build = Path.Combine(project, "build"); Directory.CreateDirectory(Path.Combine(build, "chunks"));
+        const string name = "chunks/中文 file #1.js";
+        var source = Path.Combine(build, "chunks", "中文 file #1.js");
+        var bytes = Encoding.UTF8.GetBytes("module.exports='完整 JS';");
+        await File.WriteAllBytesAsync(source, bytes);
+        var cacheRoot = Folder("copy cache"); var cache = new BuildFileCopies(cacheRoot);
+        var copied = await cache.CreateAsync(project, name);
+        Check(Path.GetFileName(copied) == Path.GetFileName(source) && (await File.ReadAllBytesAsync(copied)).SequenceEqual(bytes), "文件名、Unicode 和完整字节保留");
+        await File.WriteAllTextAsync(source, "changed");
+        Check((await File.ReadAllBytesAsync(copied)).SequenceEqual(bytes), "副本独立于 build 变化");
+        var newer = await cache.CreateAsync(project, name);
+        Check(copied != newer, "重复复制使用独立路径");
+        foreach (var invalid in new[] { "../outside.js", "/outside.js", "chunks/../outside.js", "chunks\\outside.js", "C:/outside.js", "", "a.txt", ".ads-work-previous-test/x.js", "missing.js" })
+            await Reject(() => cache.CreateAsync(project, invalid), "拒绝无效或越界文件：" + invalid);
+        using (var buildLock = new BuildDirectoryLock(BuildDirectory.Project(project)))
+            await Reject(() => cache.CreateAsync(project, name), "构建锁拒绝并发复制");
+        if (!OperatingSystem.IsWindows())
+        {
+            var outside = Write("copy outside.js", "outside");
+            File.CreateSymbolicLink(Path.Combine(build, "linked.js"), outside);
+            await Reject(() => cache.CreateAsync(project, "linked.js"), "拒绝文件链接");
+            File.Delete(Path.Combine(build, "linked.js"));
+            Directory.CreateSymbolicLink(Path.Combine(build, "linked-dir"), Path.Combine(build, "chunks"));
+            await Reject(() => cache.CreateAsync(project, "linked-dir/中文 file #1.js"), "拒绝父目录链接");
+            Directory.Delete(Path.Combine(build, "linked-dir"));
+            var alias = Path.Combine(Root, "copy cache alias"); Directory.CreateSymbolicLink(alias, cacheRoot);
+            await Reject(() => new BuildFileCopies(alias).CreateAsync(project, name), "拒绝缓存链接");
+            Directory.Delete(alias);
+        }
+        var huge = Path.Combine(build, "huge.js");
+        using (var stream = File.Create(huge)) stream.SetLength(BuildFileCopies.Limit + 1);
+        await Reject(() => cache.CreateAsync(project, "huge.js"), "文件大小上限"); File.Delete(huge);
+        using (var cancel = new CancellationTokenSource())
+        {
+            cancel.Cancel(); await Reject(() => cache.CreateAsync(project, name, cancel.Token), "取消复制");
+        }
+        var inside = Path.Combine(build, "cache");
+        await Reject(() => new BuildFileCopies(inside).CreateAsync(project, name), "不在 build 中创建缓存");
+        Check(!Directory.Exists(inside), "拒绝后未创建 build 内缓存");
+        BuildDirectory.Clear(project, []);
+        Check((await File.ReadAllBytesAsync(copied)).SequenceEqual(bytes), "清空 build 后副本完整");
+        var pasted = Path.Combine(Folder("copy pasted"), Path.GetFileName(copied)); File.Copy(copied, pasted);
+        Check((await File.ReadAllBytesAsync(pasted)).SequenceEqual(bytes), "清空后仍可粘贴文件");
+        Directory.SetLastWriteTimeUtc(Path.GetDirectoryName(copied)!, DateTime.UnixEpoch);
+        Directory.SetLastWriteTimeUtc(Path.GetDirectoryName(newer)!, DateTime.UnixEpoch);
+        var unrelated = Path.Combine(cacheRoot, "unrelated"); Directory.CreateDirectory(unrelated);
+        cache.Prune([copied]);
+        Check(File.Exists(copied) && !File.Exists(newer) && Directory.Exists(unrelated), "保护当前剪贴板、清理过期副本并保留无关目录");
+        for (var i = 0; i < 12; i++)
+        {
+            var dir = Path.Combine(cacheRoot, Guid.NewGuid().ToString("D")); Directory.CreateDirectory(dir);
+            await File.WriteAllBytesAsync(Path.Combine(dir, "file.js"), bytes);
+        }
+        cache.Prune([copied]);
+        Check(Directory.GetDirectories(cacheRoot).Count(path => Guid.TryParse(Path.GetFileName(path), out _)) == 11 && File.Exists(copied), "保留十份最近副本及当前剪贴板");
+        Check(!File.Exists(Path.Combine(project, ".ads-work-build.lock")), "复制释放构建锁");
     }
 
     private static async Task ArchiveChecks()

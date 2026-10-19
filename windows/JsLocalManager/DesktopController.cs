@@ -17,6 +17,7 @@ internal sealed class DesktopController
     private object? status;
     private bool stopping;
     private bool confirmingClear;
+    private bool copyingFile;
     private DateTime lastLogPublish;
     public bool Busy => operation is not null || confirmingClear;
 
@@ -56,6 +57,7 @@ internal sealed class DesktopController
             return new { message = "日志已复制" };
         }
         if (Busy) throw new UserVisibleException("当前操作尚未结束，请稍后重试。");
+        if (request.Action == "copyBuildFile") return await CopyBuildFileAsync(request);
         ReadSettings(args);
         switch (request.Action)
         {
@@ -88,6 +90,41 @@ internal sealed class DesktopController
                 return new { snapshot = Snapshot(), message = "版本和备注已保存" };
             default: return await RunAsync(request);
         }
+    }
+
+    private async Task<object> CopyBuildFileAsync(UiRequest request)
+    {
+        var project = UiProtocol.Text(request.Args, "projectPath");
+        var name = UiProtocol.Text(request.Args, "fileName");
+        var cache = new BuildFileCopies(Path.Combine(archive.Root, "copied-js"));
+        using var cancellation = new CancellationTokenSource();
+        operation = cancellation; copyingFile = true; stopping = false;
+        status = new { state = "running", stage = "复制文件", message = "正在准备 JS 文件副本…" };
+        publish("state", Snapshot());
+        try
+        {
+            var file = await Task.Run(() => cache.CreateAsync(project, name, cancellation.Token), cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            var data = new DataObject(); data.SetData(DataFormats.FileDrop, true, new[] { file });
+            using var effect = new MemoryStream(BitConverter.GetBytes((int)DragDropEffects.Copy));
+            data.SetData("Preferred DropEffect", effect);
+            Clipboard.SetDataObject(data, copy: true);
+            try { cache.Prune([file]); }
+            catch (Exception) { Debug.WriteLine("复制文件成功，但旧副本缓存未能清理；下次复制时将重试。"); }
+            status = new { state = "success", stage = "操作完成", message = "JS 文件已复制，可直接粘贴到文件夹" };
+            return new { message = "JS 文件已复制，可直接粘贴到文件夹", copiedFile = name };
+        }
+        catch (OperationCanceledException error)
+        {
+            status = new { state = "cancelled", stage = "已停止", message = "复制已停止，剪贴板未更新。" };
+            throw new UserVisibleException("复制已停止，剪贴板未更新。", error);
+        }
+        catch (Exception error)
+        {
+            status = new { state = "failure", stage = "复制未完成", message = LogRedactor.Redact(error.Message) };
+            throw;
+        }
+        finally { operation = null; copyingFile = false; stopping = false; publish("state", Snapshot()); }
     }
 
     private async Task<object> RunAsync(UiRequest request)
@@ -194,7 +231,7 @@ internal sealed class DesktopController
     {
         if (operation is null) return;
         stopping = true; operation.Cancel();
-        status = new { state = "running", stage = "正在停止", message = "正在结束子进程并恢复暂存的旧产物…" };
+        status = new { state = "running", stage = "正在停止", message = copyingFile ? "正在停止复制文件…" : "正在结束子进程并恢复暂存的旧产物…" };
         publish("progress", new { busy = true, stopping, operation = status, logs = string.Join('\n', logs) });
     }
 

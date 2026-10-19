@@ -30,19 +30,45 @@ final class MacWebBridge: MacWebChannel {
     private var lastSelection: UUID?
     private let confirmBuildClear: (String) -> Bool
     private var confirmingClear = false
-    private static let actions: Set<String> = ["state", "buildFiles", "clearBuild", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"]
+    private var copyCancellation: LocalBuildCancellation?
+    private let copyCache: BuildFileCopies
+    private let pasteboard: NSPasteboard
+    private static let actions: Set<String> = ["state", "buildFiles", "copyBuildFile", "clearBuild", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"]
 
-    init(model: LocalBuildModel, remoteBusy: @escaping () -> Bool = { false }, confirmBuildClear: ((String) -> Bool)? = nil) {
+    init(model: LocalBuildModel, remoteBusy: @escaping () -> Bool = { false }, confirmBuildClear: ((String) -> Bool)? = nil, copyCacheRoot: URL = BuildFileCopies.defaultRoot, pasteboard: NSPasteboard = .general) {
         self.model = model; self.remoteBusy = remoteBusy
+        self.copyCache = BuildFileCopies(root: copyCacheRoot); self.pasteboard = pasteboard
         self.confirmBuildClear = confirmBuildClear ?? Self.confirmClear
         super.init(page: MacWebAssets.page, allowed: Self.actions)
         observe(model)
     }
 
-    override func stopOperation() { if model.isRunning { model.stop() } }
+    override func stopOperation() { copyCancellation?.cancel(); if model.isRunning { model.stop() } }
+
+    override func handleAsync(_ action: String, args: [String: Any]) async throws -> [String: Any] {
+        guard action == "copyBuildFile" else { return try handle(action, args: args) }
+        guard !model.isRunning, !remoteBusy(), !confirmingClear, copyCancellation == nil else {
+            throw LocalBuildError.message("当前操作尚未结束，请稍后重试。")
+        }
+        let projectPath = try text(args, "projectPath")
+        let name = try text(args, "fileName")
+        let token = LocalBuildCancellation(); let cache = copyCache
+        copyCancellation = token; publish()
+        defer { copyCancellation = nil; publish() }
+        let url = try await Task.detached(priority: .userInitiated) {
+            try cache.create(projectPath: projectPath, name: name, cancellation: token)
+        }.value
+        try token.check()
+        pasteboard.clearContents()
+        guard pasteboard.writeObjects([url as NSURL]) else { throw LocalBuildError.message("文件无法写入剪贴板，请重试。") }
+        do { try cache.prune(preserving: [url]) }
+        catch { NSLog("复制文件成功，但旧副本缓存未能清理；下次复制时将重试。") }
+        return ["message": "JS 文件已复制，可直接粘贴到文件夹", "copiedFile": name]
+    }
 
     override func handle(_ action: String, args: [String: Any]) throws -> [String: Any] {
         guard Self.actions.contains(action) else { throw LocalBuildError.message("不支持的本地操作。") }
+        if action == "copyBuildFile" { throw LocalBuildError.message("文件复制需要异步消息通道。") }
         if action == "state" { model.refresh(); return ["snapshot": snapshot()] }
         if action == "buildFiles" {
             let directory = try BuildDirectory.read(text(args, "projectPath"))
@@ -50,9 +76,9 @@ final class MacWebBridge: MacWebChannel {
             return ["buildDirectory": ["path": directory.path, "exists": directory.exists, "entryCount": directory.entryCount,
                 "files": directory.files.map { ["name": $0.name, "size": $0.size, "modifiedAt": date.string(from: $0.modifiedAt)] as [String: Any] }]]
         }
-        if action == "cancel" { model.stop(); return ["snapshot": snapshot()] }
+        if action == "cancel" { copyCancellation?.cancel(); model.stop(); return ["snapshot": snapshot()] }
         if action == "copyLog" { model.copyLog(); return ["message": "日志已复制"] }
-        guard !model.isRunning, !remoteBusy(), !confirmingClear else { throw LocalBuildError.message("当前操作尚未结束，请稍后重试。") }
+        guard !model.isRunning, !remoteBusy(), !confirmingClear, copyCancellation == nil else { throw LocalBuildError.message("当前操作尚未结束，请稍后重试。") }
         if let settings = args["settings"] as? [String: Any] {
             model.settings = LocalBuildSettings(projectPath: try text(settings, "projectPath"), libraryPath: try text(settings, "libraryPath"))
         }
@@ -112,7 +138,7 @@ final class MacWebBridge: MacWebChannel {
         let backups: [[String: Any]] = model.availableBackups.map { backup in
             ["id": backup.id.uuidString.lowercased(), "createdAt": formatter.string(from: backup.createdAt), "label": backup.label]
         }
-        let busy = model.isRunning || remoteBusy()
+        let busy = model.isRunning || remoteBusy() || copyCancellation != nil
         var operation: Any = NSNull()
         let state: String
         switch model.state {
@@ -124,6 +150,9 @@ final class MacWebBridge: MacWebChannel {
         }
         if state != "idle" {
             operation = ["state": state, "stage": model.currentStage?.title ?? "本地操作", "message": model.state.message]
+        }
+        if copyCancellation != nil {
+            operation = ["state": "running", "stage": "复制文件", "message": "正在准备 JS 文件副本…"]
         }
         let selection = model.selectedID.flatMap { id in model.records.contains(where: { $0.id == id }) ? id : nil }
         let preferred: Any = selection != lastSelection ? selection?.uuidString.lowercased() as Any? ?? NSNull() : NSNull()

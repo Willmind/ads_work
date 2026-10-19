@@ -1,0 +1,36 @@
+{
+  "version": "0.8.0",
+  "windows": {
+    "file": "AdsWork-JS-Manager-Windows-x64-0.8.0.zip",
+    "sha256": "5b07615dac8e63a35c7559be6b58d02423b91f523fe2c668a742b4331919018e",
+    "size": 48534227,
+    "roundTripVerified": true,
+    "bootstrapperMatchesPin": true,
+    "loaderMatchesSdk": true,
+    "windowsNativeTested": false
+  },
+  "mac": {
+    "file": "Mix Web 部署工具-0.8.0.zip",
+    "sha256": "c98ad7182e9aa3a35ed660d80f664530a7364f77d6627684199e11f9bfad85f7",
+    "size": 421342,
+    "signedAdHoc": true,
+    "extractedSignatureVerified": true,
+    "roundTripVerified": true,
+    "version": "0.8.0",
+    "build": "13"
+  },
+  "checks": {
+    "swiftFullCore": true,
+    "swiftBuildDirectoryAssertions": 25,
+    "swiftFileCopyAssertions": 27,
+    "windowsCoreAssertionsOnMac": 149,
+    "browserLocal": 62,
+    "browserBuildDirectory": 12,
+    "browserCopyRefresh": 21,
+    "browserMotion": 24,
+    "browserBridgeContract": 7,
+    "browserServer": 66,
+    "macLocalWebKitReducedMotion": 32,
+    "macServerWebKitReducedMotion": 27
+  }
+}

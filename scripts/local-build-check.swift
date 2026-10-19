@@ -11,6 +11,7 @@ enum LocalBuildCheck {
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? files.removeItem(at: root) }
         try BuildDirectoryCheck.run(in: root)
+        try BuildCopyCheck.run(in: root)
         let cancellation = LocalBuildCancellation()
         let process = LocalBuildProcess(cancellation: cancellation)
 

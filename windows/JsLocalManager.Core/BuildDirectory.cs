@@ -49,6 +49,23 @@ public static class BuildDirectory
         return new(build, true, entries.Count, files);
     }
 
+    public static string FileIn(string project, string name)
+    {
+        var parts = name.Split('/');
+        if (parts.Any(part => string.IsNullOrEmpty(part) || part is "." or ".." ||
+                part.StartsWith(".ads-work-previous-", StringComparison.Ordinal) || part.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0) ||
+            name.Contains('\\') || name.Contains(':') || !System.IO.Path.GetExtension(name).Equals(".js", StringComparison.OrdinalIgnoreCase))
+            throw new UserVisibleException("请选择 build 列表中的 JS 文件。");
+        var source = System.IO.Path.Combine(project, "build");
+        RequireDirectory(source);
+        foreach (var part in parts[..^1]) { source = System.IO.Path.Combine(source, part); RequireDirectory(source); }
+        source = System.IO.Path.Combine(source, parts[^1]);
+        var attributes = File.GetAttributes(source);
+        if ((attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint | FileAttributes.Device)) != 0)
+            throw new UserVisibleException("JS 文件已变化或不是普通文件，请刷新后重试。");
+        return source;
+    }
+
     public static int Clear(string path, IEnumerable<string> protectedPaths, CancellationToken token = default)
     {
         var project = Project(path);
@@ -91,7 +108,7 @@ public static class BuildDirectory
         catch (DirectoryNotFoundException) { return false; }
     }
 
-    private static string PhysicalPath(string path)
+    internal static string PhysicalPath(string path)
     {
         var full = System.IO.Path.GetFullPath(path);
         var root = System.IO.Path.GetPathRoot(full)!;

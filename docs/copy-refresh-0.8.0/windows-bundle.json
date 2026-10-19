@@ -1,0 +1,20 @@
+{
+  "windowsX64": true,
+  "guiSubsystem": true,
+  "bundleVersion": "6.0",
+  "bundleEntries": 260,
+  "selfContainedFrameworks": [
+    {
+      "name": "Microsoft.NETCore.App",
+      "version": "10.0.13"
+    },
+    {
+      "name": "Microsoft.WindowsDesktop.App",
+      "version": "10.0.13"
+    }
+  ],
+  "assemblyMatchesCompiledOutput": true,
+  "coreMatchesCompiledOutput": true,
+  "exeSha256": "25c8efe5c5967eb337073fb7a113304b8e823e4035f295862cc018d3458fd62d",
+  "bundledAssemblySha256": "920d140fc795096f2e74667040e71a0b72e1b19362de3abea2bcc477938cd091"
+}

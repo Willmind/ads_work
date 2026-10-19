@@ -1,0 +1,6 @@
+{
+  "scope": "真实 WKWebView 与原 AppModel；内存配置、虚构地址、临时假 PEM、离线 Expect 模拟器；无真实 SSH、远程 Git 或后台请求",
+  "failures": [],
+  "checks": 27,
+  "motionScope": "原生自动化测试副本启用减少动态效果；交付包保留正常动画，旋转效果另由真实 Chrome 检查。"
+}

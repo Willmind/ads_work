@@ -39,10 +39,12 @@ struct MacWebCheck {
         try "module.exports=1;".write(to: build.appendingPathComponent("fixture.js"), atomically: true, encoding: .utf8)
         var approveClear = false
         var clearConfirmations = 0
+        let pasteboard = NSPasteboard(name: .init("AdsWork-WebCheck-\(UUID())"))
+        defer { pasteboard.releaseGlobally() }
         let bridge = MacWebBridge(model: model, confirmBuildClear: { path in
             clearConfirmations += 1
             return approveClear && path == (try? BuildDirectory.read(project.path).path)
-        })
+        }, copyCacheRoot: root.appendingPathComponent("copied-js"), pasteboard: pasteboard)
         let view = bridge.makeWebView(assets: URL(fileURLWithPath: CommandLine.arguments[1]))
         let debug = DebugMessages(); view.configuration.userContentController.add(debug, name: "testDebug")
         view.configuration.userContentController.addUserScript(WKUserScript(source: "window.addEventListener('error',e=>window.webkit.messageHandlers.testDebug.postMessage(e.message||e.target.src),true);window.addEventListener('unhandledrejection',e=>window.webkit.messageHandlers.testDebug.postMessage(String(e.reason)))", injectionTime: .atDocumentStart, forMainFrameOnly: true))
@@ -76,6 +78,17 @@ struct MacWebCheck {
                 try "module.exports=2;".write(to: build.appendingPathComponent("external.js"), atomically: true, encoding: .utf8)
                 try await wait { (try await js("document.querySelectorAll('#buildFiles tr').length")) as? Int == 2 }
                 try check(true, "外部新增 JS 自动刷新")
+                pasteboard.clearContents(); pasteboard.setString("existing clipboard", forType: .string)
+                var invalidCopyRejected = false
+                do { _ = try await bridge.handleAsync("copyBuildFile", args: ["projectPath": project.path, "fileName": "../outside.js"]) }
+                catch { invalidCopyRejected = true }
+                try check(invalidCopyRejected && pasteboard.string(forType: .string) == "existing clipboard", "复制失败保留原剪贴板")
+                _ = try await js("document.querySelector('[data-copy-file=\"fixture.js\"]').click()")
+                try await wait { (try await js("document.querySelector('[data-copy-file=\"fixture.js\"] span').textContent")) as? String == "已复制" }
+                let copiedURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+                guard let copiedFile = copiedURLs.first else { throw LocalBuildError.message("剪贴板没有文件 URL") }
+                try check(copiedURLs.count == 1 && copiedFile.lastPathComponent == "fixture.js", "真实剪贴板写入单个文件及原名称")
+                try check(try String(contentsOf: copiedFile, encoding: .utf8) == "module.exports=1;", "剪贴板引用完整 JS 副本")
                 _ = try await js("document.querySelector('#clearBuild').click()")
                 try await wait { clearConfirmations == 1 }
                 try check(FileManager.default.fileExists(atPath: build.appendingPathComponent("fixture.js").path), "取消原生确认不删除")
@@ -85,6 +98,9 @@ struct MacWebCheck {
                 try await wait { (try await js("document.querySelectorAll('#buildFiles tr').length")) as? Int == 0 }
                 try check(try FileManager.default.fileExists(atPath: build.path) && store.load().artifacts.count == 1, "网页清空保留 build 及归档")
                 try check((try await js("document.querySelector('#clearBuild').disabled")) as? Bool == true, "空目录清空按钮禁用")
+                let pasted = root.appendingPathComponent("pasted-fixture.js")
+                try FileManager.default.copyItem(at: copiedFile, to: pasted)
+                try check(try String(contentsOf: pasted, encoding: .utf8) == "module.exports=1;", "通过剪贴板引用在清空后仍能粘贴完整文件")
                 for mode in ["build", "download", "file"] {
                     _ = try await js("document.querySelector('#tab-\(mode)').click()")
                     try check((try await js("!document.querySelector('#panel-\(mode)').hidden")) as? Bool == true, "来源切换 \(mode)")

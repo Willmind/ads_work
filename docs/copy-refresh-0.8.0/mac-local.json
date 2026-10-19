@@ -1,0 +1,7 @@
+{
+  "checks": 32,
+  "scope": "真实 Mac WKWebView、页面消息桥接、临时目录安装与恢复；不接触用户 AdsPower 文件",
+  "failures": [],
+  "motionScope": "原生自动化测试副本启用减少动态效果；交付包保留正常动画，旋转效果另由真实 Chrome 检查。",
+  "clipboardScope": "真实 NSPasteboard 专用命名测试剪贴板，验证文件 URL 和清空后副本复制；未操作用户通用剪贴板或真实 Finder。"
+}
