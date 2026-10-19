@@ -1,6 +1,10 @@
 const listeners = new Set();
 const seeded = new URLSearchParams(location.search).get('seed') !== '0';
 const now = new Date().toISOString();
+let buildFiles = seeded ? [
+  { name: 'v2.8.9.4_main.min.js', size: 8804293, modifiedAt: now },
+  { name: 'chunks/vendor.js', size: 524288, modifiedAt: now }
+] : [];
 let state = {
   settings: { projectPath: 'C:\\install\\mix_client', libraryPath: 'C:\\Users\\StandardSoftware\\AppData\\Roaming\\adspower_global\\cwd_global\\lib' },
   records: seeded ? [
@@ -12,7 +16,13 @@ let state = {
 export function subscribe(listener) { listeners.add(listener); }
 function emit() { for (const listener of listeners) listener('state', structuredClone(state)); }
 export async function request(action, args = {}) {
+  if (action === 'buildFiles') return { buildDirectory: { path: `${args.projectPath}${args.projectPath.includes('\\') ? '\\' : '/'}build`, exists: true, entryCount: buildFiles.length, files: structuredClone(buildFiles) } };
   if (args.settings) state.settings = { ...args.settings };
+  if (action === 'clearBuild') {
+    if (!window.confirm('预览：确认清空演示 build 列表？不会删除本机文件。')) return { snapshot: structuredClone(state), message: '已取消清空' };
+    buildFiles = [];
+    return { snapshot: structuredClone(state), message: '预览：build 列表已清空，本机文件未改动。' };
+  }
   if (action === 'state' || action === 'saveSettings') return { snapshot: structuredClone(state), message: action === 'saveSettings' ? '预览：路径已更新' : '' };
   if (action === 'cancel') { state.busy = false; state.operation = { state: 'cancelled', stage: '已停止', message: '预览：操作已停止。' }; emit(); return {}; }
   if (action === 'updateMetadata') {

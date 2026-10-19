@@ -5,7 +5,7 @@ final class MacWebAssets: NSObject, WKURLSchemeHandler {
     static let page = URL(string: "adswork://app/index.html")!
     static let serverPage = URL(string: "adswork://app/server.html")!
     let root: URL
-    private let types = ["index.html": "text/html", "styles.css": "text/css", "app.js": "text/javascript",
+    private let types = ["index.html": "text/html", "styles.css": "text/css", "app.js": "text/javascript", "build-directory.js": "text/javascript",
                          "bridge.js": "text/javascript", "preview.js": "text/javascript", "motion.js": "text/javascript", "logo.svg": "image/svg+xml", "icons.svg": "image/svg+xml",
                          "server.html": "text/html", "server.js": "text/javascript", "server.css": "text/css"]
 

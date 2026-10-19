@@ -32,7 +32,17 @@ struct MacWebCheck {
         _ = try store.archive(source, sourceKind: .build, note: "Mac HTML 界面验证", branch: "test/web-ui")
         let model = LocalBuildModel(defaults: WebMemoryDefaults(), archiveRoot: store.root)
         model.settings = LocalBuildSettings(projectPath: root.appendingPathComponent("mix_client").path, libraryPath: lib.path)
-        let bridge = MacWebBridge(model: model)
+        let project = URL(fileURLWithPath: model.settings.projectPath)
+        let build = project.appendingPathComponent("build")
+        try FileManager.default.createDirectory(at: build, withIntermediateDirectories: true)
+        try #"{"scripts":{"buildLb":"node fixture.js"}}"#.write(to: project.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+        try "module.exports=1;".write(to: build.appendingPathComponent("fixture.js"), atomically: true, encoding: .utf8)
+        var approveClear = false
+        var clearConfirmations = 0
+        let bridge = MacWebBridge(model: model, confirmBuildClear: { path in
+            clearConfirmations += 1
+            return approveClear && path == (try? BuildDirectory.read(project.path).path)
+        })
         let view = bridge.makeWebView(assets: URL(fileURLWithPath: CommandLine.arguments[1]))
         let debug = DebugMessages(); view.configuration.userContentController.add(debug, name: "testDebug")
         view.configuration.userContentController.addUserScript(WKUserScript(source: "window.addEventListener('error',e=>window.webkit.messageHandlers.testDebug.postMessage(e.message||e.target.src),true);window.addEventListener('unhandledrejection',e=>window.webkit.messageHandlers.testDebug.postMessage(String(e.reason)))", injectionTime: .atDocumentStart, forMainFrameOnly: true))
@@ -61,6 +71,20 @@ struct MacWebCheck {
                 try check((try await js("document.querySelector('#previewBanner').hidden")) as? Bool == true, "必须连接真实 Mac 消息通道")
                 try check((try await js("document.querySelectorAll('#records tr').length")) as? Int == 1, "读取原生归档记录")
                 try check((try await js("document.querySelector('#libraryPath').value")) as? String == lib.path, "读取 Mac 路径")
+                try await wait { (try await js("document.querySelectorAll('#buildFiles tr').length")) as? Int == 1 }
+                try check(true, "真实 build 文件列表读取")
+                try "module.exports=2;".write(to: build.appendingPathComponent("external.js"), atomically: true, encoding: .utf8)
+                try await wait { (try await js("document.querySelectorAll('#buildFiles tr').length")) as? Int == 2 }
+                try check(true, "外部新增 JS 自动刷新")
+                _ = try await js("document.querySelector('#clearBuild').click()")
+                try await wait { clearConfirmations == 1 }
+                try check(FileManager.default.fileExists(atPath: build.appendingPathComponent("fixture.js").path), "取消原生确认不删除")
+                approveClear = true
+                _ = try await js("document.querySelector('#clearBuild').click()")
+                try await wait { try clearConfirmations == 2 && !model.isRunning && FileManager.default.contentsOfDirectory(atPath: build.path).isEmpty }
+                try await wait { (try await js("document.querySelectorAll('#buildFiles tr').length")) as? Int == 0 }
+                try check(try FileManager.default.fileExists(atPath: build.path) && store.load().artifacts.count == 1, "网页清空保留 build 及归档")
+                try check((try await js("document.querySelector('#clearBuild').disabled")) as? Bool == true, "空目录清空按钮禁用")
                 for mode in ["build", "download", "file"] {
                     _ = try await js("document.querySelector('#tab-\(mode)').click()")
                     try check((try await js("!document.querySelector('#panel-\(mode)').hidden")) as? Bool == true, "来源切换 \(mode)")

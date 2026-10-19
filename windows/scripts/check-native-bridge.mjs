@@ -29,7 +29,7 @@ try {
   await page.locator('#projectPath').fill('E:\\work project');
   await page.locator('[data-action=saveSettings]').click();
   await page.waitForTimeout(30);
-  let requests = await page.evaluate(() => window.bridgeRequests);
+  let requests = await page.evaluate(() => window.bridgeRequests.filter(request => request.action !== 'buildFiles'));
   check(requests.at(-1).action === 'saveSettings' && requests.at(-1).args.settings.projectPath === 'E:\\work project', '路径通过结构化参数传输');
   check(/^[0-9a-f-]{36}$/.test(requests[0].id), '请求 ID 为 UUID');
   await page.locator('[data-action=chooseProject]').click();
@@ -40,7 +40,7 @@ try {
   await page.locator('#newNote').fill('结构化参数测试');
   await page.locator('#addPrimary').click();
   await page.waitForTimeout(30);
-  requests = await page.evaluate(() => window.bridgeRequests);
+  requests = await page.evaluate(() => window.bridgeRequests.filter(request => request.action !== 'buildFiles'));
   check(requests.at(-1).action === 'download' && requests.at(-1).args.note === '结构化参数测试', '下载接口参数契约');
   check(requests.at(-1).args.url.endsWith('.js'), '下载 URL 参数');
   console.log(`本地消息桥接浏览器契约检查通过：${count} 项断言。未访问本机文件。`);

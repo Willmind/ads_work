@@ -33,7 +33,7 @@ export function request(action, args = {}) {
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error('本地操作响应超时。请查看状态，不要重复安装；必要时停止后重试。'));
-    }, ['buildSave', 'buildInstall', 'download', 'import', 'install', 'restore'].includes(action) ? 17 * 60 * 1000 : 30000);
+    }, ['buildSave', 'buildInstall', 'download', 'import', 'install', 'restore', 'clearBuild'].includes(action) ? 17 * 60 * 1000 : 30000);
     pending.set(id, { resolve, reject, timer });
     try { native.postMessage({ id, action, args }); }
     catch (error) { clearTimeout(timer); pending.delete(id); reject(error); }

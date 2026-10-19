@@ -34,6 +34,8 @@ internal static class Program
             Console.WriteLine("PASS 本地页面来源、操作白名单与消息参数检查");
             await DownloadChecks();
             Console.WriteLine("PASS 只读下载、跳转限制、MD5 与异常处理");
+            await BuildDirectoryChecks();
+            Console.WriteLine("PASS build 目录读取、清空边界与构建锁");
             await BuildChecks();
             Console.WriteLine("PASS 真实 Git/npm 打包、同名产物与失败回滚");
             await ProcessChecks();
@@ -103,6 +105,64 @@ internal static class Program
         }
         await Reject(() => Task.FromResult(FileInspector.Destination("relative")), "相对目标目录");
         Check(!LogRedactor.Redact("https://host/a?token=secret C:\\Users\\X\\data").Contains("secret"), "日志隐藏 URL");
+    }
+
+    private static async Task BuildDirectoryChecks()
+    {
+        var project = Folder("directory project");
+        await File.WriteAllTextAsync(Path.Combine(project, "package.json"), "{\"scripts\":{\"buildLb\":\"node fixture.js\"}}");
+        var build = Path.Combine(project, "build");
+        var missing = BuildDirectory.Read(project);
+        Check(!missing.Exists && missing.Files.Length == 0 && !Directory.Exists(build), "读取不创建 build");
+        Directory.CreateDirectory(Path.Combine(build, "chunks"));
+        await File.WriteAllTextAsync(Path.Combine(build, "main.js"), "module.exports=1;");
+        await File.WriteAllTextAsync(Path.Combine(build, "chunks", "second.JS"), "module.exports=2;");
+        await File.WriteAllTextAsync(Path.Combine(build, "main.js.map"), "map");
+        File.SetLastWriteTimeUtc(Path.Combine(build, "main.js"), DateTime.UnixEpoch);
+        var snapshot = BuildDirectory.Read(project);
+        Check(snapshot.Files.Length == 2 && snapshot.EntryCount == 4, "递归只列出 JS");
+        Check(snapshot.Files[0].Name == "chunks/second.JS" && snapshot.Files.All(file => file.Size > 0), "修改时间排序与相对路径、大小");
+        await File.WriteAllTextAsync(Path.Combine(build, "added.js"), "module.exports=3;");
+        Check(BuildDirectory.Read(project).Files.Length == 3, "外部新增立即可读");
+        File.Delete(Path.Combine(build, "added.js"));
+        Check(BuildDirectory.Read(project).Files.Length == 2, "外部删除立即可读");
+        using (var buildLock = new BuildDirectoryLock(project))
+            await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [])), "打包持锁时禁止清空");
+        Check(File.Exists(Path.Combine(build, "main.js")), "锁拒绝时文件保留");
+        await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [Path.Combine(build, "lib")])), "保护安装目录");
+        var outside = Write("outside.js", "outside");
+        if (!OperatingSystem.IsWindows())
+        {
+            var alias = Path.Combine(Root, "project-alias");
+            Directory.CreateSymbolicLink(alias, project);
+            await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [Path.Combine(alias, "build", "lib")])), "保护通过父目录链接配置的安装目录");
+            Directory.Delete(alias);
+            File.CreateSymbolicLink(Path.Combine(build, "linked.js"), outside);
+            Check(BuildDirectory.Read(project).Files.Length == 2, "不跟随链接读取");
+            await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [])), "预检查拒绝链接");
+            Check(File.Exists(Path.Combine(build, "main.js")) && await File.ReadAllTextAsync(outside) == "outside", "拒绝前不删除任何文件");
+            File.Delete(Path.Combine(build, "linked.js"));
+        }
+        Directory.CreateDirectory(Path.Combine(build, ".ads-work-previous-test"));
+        await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [])), "保护未处理的旧产物");
+        Directory.Delete(Path.Combine(build, ".ads-work-previous-test"));
+        using (var cancelled = new CancellationTokenSource())
+        {
+            cancelled.Cancel();
+            await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [], cancelled.Token)), "取消清空");
+        }
+        Check(File.Exists(Path.Combine(build, "main.js")), "取消保留文件");
+        Check(BuildDirectory.Clear(project, [outside]) == 4 && Directory.Exists(build), "清空全部内容但保留 build");
+        Check(!Directory.EnumerateFileSystemEntries(build).Any() && await File.ReadAllTextAsync(outside) == "outside", "清空 map、子目录且不影响外部文件");
+        Check(!File.Exists(Path.Combine(project, ".ads-work-build.lock")), "清空释放共用锁");
+        if (!OperatingSystem.IsWindows())
+        {
+            Directory.Delete(build); Directory.CreateSymbolicLink(build, Root);
+            await Reject(() => Task.FromResult(BuildDirectory.Read(project)), "拒绝 build 根链接读取");
+            await Reject(() => Task.FromResult(BuildDirectory.Clear(project, [])), "拒绝 build 根链接清空");
+            Directory.Delete(build);
+        }
+        await Reject(() => Task.FromResult(BuildDirectory.Read(Root)), "无效项目不允许操作");
     }
 
     private static async Task ArchiveChecks()

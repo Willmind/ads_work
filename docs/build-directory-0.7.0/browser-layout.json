@@ -1,0 +1,5 @@
+{
+  "checks": 62,
+  "failures": [],
+  "scope": "Chrome HTML/CSS 渲染、交互与响应式布局；不替代 Windows WebView2 实机验证"
+}

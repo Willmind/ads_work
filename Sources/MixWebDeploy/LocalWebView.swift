@@ -28,10 +28,13 @@ final class MacWebBridge: MacWebChannel {
     let model: LocalBuildModel
     private let remoteBusy: () -> Bool
     private var lastSelection: UUID?
-    private static let actions: Set<String> = ["state", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"]
+    private let confirmBuildClear: (String) -> Bool
+    private var confirmingClear = false
+    private static let actions: Set<String> = ["state", "buildFiles", "clearBuild", "saveSettings", "chooseProject", "chooseLibrary", "buildSave", "buildInstall", "download", "import", "install", "updateMetadata", "restore", "openArchive", "copyLog", "cancel"]
 
-    init(model: LocalBuildModel, remoteBusy: @escaping () -> Bool = { false }) {
+    init(model: LocalBuildModel, remoteBusy: @escaping () -> Bool = { false }, confirmBuildClear: ((String) -> Bool)? = nil) {
         self.model = model; self.remoteBusy = remoteBusy
+        self.confirmBuildClear = confirmBuildClear ?? Self.confirmClear
         super.init(page: MacWebAssets.page, allowed: Self.actions)
         observe(model)
     }
@@ -41,13 +44,26 @@ final class MacWebBridge: MacWebChannel {
     override func handle(_ action: String, args: [String: Any]) throws -> [String: Any] {
         guard Self.actions.contains(action) else { throw LocalBuildError.message("不支持的本地操作。") }
         if action == "state" { model.refresh(); return ["snapshot": snapshot()] }
+        if action == "buildFiles" {
+            let directory = try BuildDirectory.read(text(args, "projectPath"))
+            let date = ISO8601DateFormatter()
+            return ["buildDirectory": ["path": directory.path, "exists": directory.exists, "entryCount": directory.entryCount,
+                "files": directory.files.map { ["name": $0.name, "size": $0.size, "modifiedAt": date.string(from: $0.modifiedAt)] as [String: Any] }]]
+        }
         if action == "cancel" { model.stop(); return ["snapshot": snapshot()] }
         if action == "copyLog" { model.copyLog(); return ["message": "日志已复制"] }
-        guard !model.isRunning, !remoteBusy() else { throw LocalBuildError.message("当前操作尚未结束，请稍后重试。") }
+        guard !model.isRunning, !remoteBusy(), !confirmingClear else { throw LocalBuildError.message("当前操作尚未结束，请稍后重试。") }
         if let settings = args["settings"] as? [String: Any] {
             model.settings = LocalBuildSettings(projectPath: try text(settings, "projectPath"), libraryPath: try text(settings, "libraryPath"))
         }
         switch action {
+        case "clearBuild":
+            let path = try BuildDirectory.project(model.settings.projectPath).appendingPathComponent("build").path
+            confirmingClear = true
+            let confirmed = confirmBuildClear(path)
+            confirmingClear = false
+            guard confirmed else { return ["snapshot": snapshot(), "message": "已取消清空，build 文件未改动"] }
+            model.clearBuild()
         case "saveSettings": return ["snapshot": snapshot(), "message": "路径已保存到本机"]
         case "chooseProject", "chooseLibrary": model.chooseDirectory(isProject: action == "chooseProject")
         case "buildSave", "buildInstall": model.note = try text(args, "note"); model.start(installAfterBuild: action == "buildInstall")
@@ -74,6 +90,16 @@ final class MacWebBridge: MacWebChannel {
     private func identifier(_ args: [String: Any]) throws -> UUID {
         guard let id = UUID(uuidString: try text(args, "id", limit: 36)) else { throw LocalBuildError.message("记录 ID 无效。") }
         return id
+    }
+
+    private static func confirmClear(_ path: String) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "清空 build 文件夹？"
+        alert.informativeText = "将删除以下目录内的所有文件和子目录，保留 build 目录本身：\n\n\(path)\n\n删除不可撤销；已保存的 JS 历史和 AdsPower 安装文件不受影响。"
+        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: "清空 build")
+        return alert.runModal() == .alertSecondButtonReturn
     }
 
     override func snapshot() -> [String: Any] {

@@ -21,8 +21,10 @@ xcrun swiftc -parse-as-library \
     "$PROJECT_DIR/Sources/MixWebDeploy/JSArchiveStore.swift" \
     "$PROJECT_DIR/Sources/MixWebDeploy/JSDownload.swift" \
     "$PROJECT_DIR/Sources/MixWebDeploy/LocalBuildProcess.swift" \
+    "$PROJECT_DIR/Sources/MixWebDeploy/BuildDirectory.swift" \
     "$PROJECT_DIR/Sources/MixWebDeploy/LocalBuildService.swift" \
     "$PROJECT_DIR/Sources/MixWebDeploy/LocalBuildModel.swift" \
+    "$PROJECT_DIR/scripts/build-directory-check.swift" \
     "$PROJECT_DIR/scripts/local-build-check.swift" \
     "$PROJECT_DIR/scripts/js-manager-check.swift" \
     -o "$PROJECT_DIR/.build/local-build-check"

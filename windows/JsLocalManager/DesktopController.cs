@@ -16,8 +16,9 @@ internal sealed class DesktopController
     private readonly List<string> logs = [];
     private object? status;
     private bool stopping;
+    private bool confirmingClear;
     private DateTime lastLogPublish;
-    public bool Busy => operation is not null;
+    public bool Busy => operation is not null || confirmingClear;
 
     internal DesktopController(Form owner, string root, Action<string, object> publish)
     {
@@ -44,6 +45,11 @@ internal sealed class DesktopController
         var args = request.Args;
         if (request.Action == "cancel") { Cancel(); return new { snapshot = Snapshot() }; }
         if (request.Action == "state") return new { snapshot = Snapshot() };
+        if (request.Action == "buildFiles")
+        {
+            var directory = await Task.Run(() => BuildDirectory.Read(UiProtocol.Text(args, "projectPath")));
+            return new { buildDirectory = directory };
+        }
         if (request.Action == "copyLog")
         {
             if (logs.Count > 0) Clipboard.SetText(string.Join('\n', logs));
@@ -53,6 +59,19 @@ internal sealed class DesktopController
         ReadSettings(args);
         switch (request.Action)
         {
+            case "clearBuild":
+                var buildPath = Path.Combine(BuildDirectory.Project(settings.ProjectPath), "build");
+                confirmingClear = true;
+                bool confirmed;
+                try
+                {
+                    confirmed = MessageBox.Show(owner, "将删除以下目录内的所有文件和子目录，保留 build 目录本身：\n\n" + buildPath +
+                        "\n\n删除不可撤销；已保存的 JS 历史和 AdsPower 安装文件不受影响。", "清空 build 文件夹？",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+                }
+                finally { confirmingClear = false; }
+                if (!confirmed) return new { snapshot = Snapshot(), message = "已取消清空，build 文件未改动" };
+                return await RunAsync(request);
             case "saveSettings": return new { snapshot = Snapshot(), message = "路径已保存到本机" };
             case "chooseProject": case "chooseLibrary":
                 ChooseDirectory(request.Action == "chooseProject");
@@ -95,6 +114,10 @@ internal sealed class DesktopController
             string message;
             switch (request.Action)
             {
+                case "clearBuild":
+                    var count = await Task.Run(() => BuildDirectory.Clear(settings.ProjectPath, [settings.LibraryPath, archive.Root], token), token);
+                    message = $"build 已清空，共删除 {count} 项；本地 JS 历史和安装文件保留。";
+                    break;
                 case "buildSave": case "buildInstall":
                     if (request.Action == "buildInstall") _ = FileInspector.Destination(settings.LibraryPath);
                     var built = await Task.Run(() => new BuildService().BuildAsync(settings.ProjectPath, progress, token), token);
@@ -135,12 +158,12 @@ internal sealed class DesktopController
         }
         catch (OperationCanceledException)
         {
-            status = new { state = "cancelled", stage = "已停止", message = "操作已停止，已归档的记录和备份仍保留在本机。" };
+            status = new { state = "cancelled", stage = "已停止", message = request.Action == "clearBuild" ? "清空已停止；已经删除的 build 内容不会恢复，请核对实时列表。" : "操作已停止，已归档的记录和备份仍保留在本机。" };
             AddLog("操作已停止。");
         }
         catch (Exception error)
         {
-            status = new { state = "failure", stage = "操作失败", message = error.Message };
+            status = new { state = "failure", stage = "操作失败", message = request.Action == "clearBuild" ? "清空未完成（部分内容可能已删除）：" + error.Message : error.Message };
             AddLog(error.Message);
         }
         finally

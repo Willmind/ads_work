@@ -1,5 +1,6 @@
 import { connect, request, subscribe } from './bridge.js';
 import { entrance, resizeCard, dismiss, showToast, installDisclosures, createTabs, createBackupPicker } from './motion.js';
+import { createBuildDirectory } from './build-directory.js';
 const $ = selector => document.querySelector(selector);
 let state = { records: [], backups: [], busy: false, logs: '', operation: null };
 let selectedId;
@@ -11,6 +12,7 @@ const moveTabIndicator = createTabs(document.querySelector('.segmented'));
 const backupPicker = createBackupPicker(document.querySelector('#backups'));
 const inputs = ['libraryPath', 'projectPath', 'newNote', 'downloadUrl', 'downloadMd5', 'editVersion', 'editNote'];
 const date = value => new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
+const buildDirectory = createBuildDirectory({ getProjectPath: () => $('#projectPath').value, isBusy: () => state.busy, formatDate: date });
 function settings() { return { projectPath: $('#projectPath').value.trim(), libraryPath: $('#libraryPath').value.trim() }; }
 function filtered() {
   const keywords = $('#search').value.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -29,6 +31,7 @@ function applyState(next, updatePaths = false) {
   renderRecords(); renderBackups(); renderOperation(); setBusy();
   $('#log').textContent = state.logs || '';
   $('#logDisclosure').hidden = !state.logs;
+  void buildDirectory.refresh();
 }
 function renderRecords() {
   const records = filtered();
@@ -111,6 +114,7 @@ function setBusy() {
   if (state.busy) backupPicker.close();
   $('#search').disabled = state.busy;
   $('#addPrimary').disabled = state.busy || (mode === 'download' && !$('#downloadUrl').value.trim());
+  buildDirectory.setBusy();
 }
 function setMode(next) {
   if (state.busy) return;
@@ -168,5 +172,5 @@ subscribe((event, data) => {
     $('#log').textContent = data.logs; $('#logDisclosure').hidden = !data.logs;
   }
 });
-try { await connect(); const result = await request('state'); applyState(result.snapshot); }
+try { await connect(); const result = await request('state'); applyState(result.snapshot); buildDirectory.start(); }
 catch (error) { $('#stage').textContent = '无法连接本地功能'; $('#status').textContent = error.message; $('#operationCard').hidden = false; $('#operationCard').dataset.state = 'failure'; }

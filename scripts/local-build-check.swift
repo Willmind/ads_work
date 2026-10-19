@@ -10,6 +10,7 @@ enum LocalBuildCheck {
         let root = files.temporaryDirectory.appendingPathComponent("ads local build check \(UUID().uuidString)")
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? files.removeItem(at: root) }
+        try BuildDirectoryCheck.run(in: root)
         let cancellation = LocalBuildCancellation()
         let process = LocalBuildProcess(cancellation: cancellation)
 

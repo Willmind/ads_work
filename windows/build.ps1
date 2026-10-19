@@ -4,7 +4,7 @@ Set-StrictMode -Version Latest
 Push-Location $PSScriptRoot
 try {
     $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-    $version = '0.6.0'
+    $version = '0.7.0'
     $distRoot = Join-Path $PSScriptRoot '..\dist'
     $packageName = "AdsWork-JS-Manager-Windows-x64-$version"
     $packageDir = Join-Path $distRoot $packageName

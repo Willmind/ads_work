@@ -106,6 +106,30 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size
 .add-card > .action-row { justify-content: flex-end; }
 
 /* History uses one inset for search, table columns and selected details. */
+.build-directory-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: var(--card-inset) var(--card-inset) 0; }
+.build-directory-toolbar > code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.build-directory-toolbar .button-group { flex-shrink: 0; }
+.build-directory-message { margin: 8px var(--card-inset) 16px; }
+.field-error { color: #b35549; }
+.build-files-scroll { max-height: 200px; overflow: auto; }
+.build-files-table { min-width: 0; table-layout: fixed; }
+.build-files-table th:first-child, .build-files-table td:first-child { width: 58%; min-width: 0; font-weight: 400; }
+.build-files-table th:nth-child(2) { width: 17%; }
+.build-files-table th:last-child { width: 25%; }
+.build-files-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.build-files-table tbody tr { cursor: default; }
+.build-files-empty { margin: 0; padding: 20px var(--card-inset); border-top: 1px solid #eceef1; font-size: 12px; color: var(--muted); }
+.build-files-table th, .build-files-table td { padding-left: 16px; padding-right: 16px; }
+.build-files-table th:first-child, .build-files-table td:first-child { padding-left: var(--card-inset); }
+.build-files-table th:last-child, .build-files-table td:last-child { padding-right: var(--card-inset); }
+@media (max-width: 740px) {
+  .build-directory-toolbar { flex-wrap: wrap; }
+  .build-directory-toolbar > code { flex-basis: 100%; }
+  .build-directory-toolbar .button-group { margin-left: 0; }
+  .build-files-table th:first-child, .build-files-table td:first-child { width: 48%; }
+  .build-files-table th:nth-child(2) { width: 20%; }
+  .build-files-table th:last-child { width: 32%; }
+}
 .count-badge { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .history-card { padding-top: var(--card-inset); }
 .search-row { display: flex; align-items: center; gap: 8px; padding: 0 var(--card-inset) 16px; }

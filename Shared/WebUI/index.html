@@ -30,6 +30,15 @@
       <div class="action-row"><div class="button-group"><button id="buildInstall" type="button" data-action="buildInstall">打包并安装</button><button id="addPrimary" type="button" data-action="buildSave" class="primary"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#package"/></svg><span>打包保存</span></button></div></div>
     </div>
   </section>
+  <section aria-labelledby="buildDirectoryTitle">
+    <div class="section-heading"><h2 id="buildDirectoryTitle"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#folder-open"/></svg>build 文件夹</h2><span id="buildFileCount" class="count-badge">正在读取…</span></div>
+    <div class="card build-directory-card">
+      <div class="build-directory-toolbar"><code id="buildDirectoryPath">所选项目 / build</code><div class="button-group"><button id="refreshBuild" type="button"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#refresh-cw"/></svg>刷新</button><button id="clearBuild" type="button" class="danger" data-action="clearBuild" disabled>清空 build</button></div></div>
+      <p id="buildDirectoryMessage" class="helper build-directory-message">自动读取当前目录；清空会删除所有文件和子目录，保留 build 目录本身。</p>
+      <div id="buildFilesTable" class="build-files-scroll" hidden><table class="build-files-table"><thead><tr><th>JS 文件</th><th>大小</th><th>修改时间</th></tr></thead><tbody id="buildFiles"></tbody></table></div>
+      <p id="buildFilesEmpty" class="build-files-empty">正在读取 build 目录…</p>
+    </div>
+  </section>
   <section id="operationCard" class="operation-card" aria-live="polite" hidden><div class="operation-icon" id="operationIcon"></div><div class="operation-copy"><strong id="stage">准备就绪</strong><p id="status"></p></div><button id="cancel" type="button" class="danger" data-action="cancel" hidden>停止</button></section>
   <section aria-labelledby="historyTitle">
     <div class="section-heading"><h2 id="historyTitle"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#layers"/></svg>本地 JS 历史</h2><span id="recordCount" class="count-badge">0 条</span></div>
@@ -41,7 +50,7 @@
   </section>
   <details id="backupDisclosure" class="card disclosure-card"><summary><span><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#archive-restore"/></svg>备份与恢复 <span id="backupCount" class="small-count">0</span></span><svg class="icon chevron" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#chevron-right"/></svg></summary><div class="disclosure-content"><p id="backupEmpty" class="helper">当前目标还没有备份。安装时会自动保存原 main.min.js。</p><div id="backupControls" class="backup-row" hidden><label class="sr-only" for="backups">选择备份</label><select id="backups" hidden aria-hidden="true" tabindex="-1"></select><button id="backupPicker" class="select-trigger" type="button" aria-label="选择备份" aria-haspopup="listbox" aria-expanded="false" aria-controls="backupMenu"><span>选择备份</span><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#chevron-right"/></svg></button><button type="button" data-action="restore">恢复选中备份</button></div><p class="helper">恢复前也会备份当前文件；文件缺失或校验不一致时会停止。</p></div></details>
   <details id="logDisclosure" class="card disclosure-card" hidden><summary><span><svg class="icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#file-text"/></svg>操作日志</span><svg class="icon chevron" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="icons.svg#chevron-right"/></svg></summary><div class="disclosure-content"><pre id="log"></pre><button type="button" data-action="copyLog">复制日志</button></div></details>
-  <footer>记录只保存在本机，不上传 JS，不修改后台数据。<span class="version">0.6.0</span></footer>
+  <footer>记录只保存在本机，不上传 JS，不修改后台数据。<span class="version">0.7.0</span></footer>
 </main>
 <div id="backupMenu" class="select-menu" role="listbox" aria-label="选择备份" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>

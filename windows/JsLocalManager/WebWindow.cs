@@ -17,7 +17,7 @@ internal sealed class WebWindow : Form
 
     internal WebWindow(string? dataRoot = null)
     {
-        Text = "AdsWork JS 本地管理 · 0.6.0";
+        Text = "AdsWork JS 本地管理 · 0.7.0";
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(1100, 880); MinimumSize = new Size(600, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -80,7 +80,7 @@ internal sealed class WebWindow : Form
         var name = uri.AbsolutePath.TrimStart('/');
         var assets = new Dictionary<string, string>
         {
-            ["index.html"] = "text/html", ["styles.css"] = "text/css", ["app.js"] = "text/javascript",
+            ["index.html"] = "text/html", ["styles.css"] = "text/css", ["app.js"] = "text/javascript", ["build-directory.js"] = "text/javascript",
             ["bridge.js"] = "text/javascript", ["preview.js"] = "text/javascript", ["motion.js"] = "text/javascript", ["logo.svg"] = "image/svg+xml", ["icons.svg"] = "image/svg+xml"
         };
         if (args.Request.Method != "GET" || uri.Scheme != "https" || uri.Host != "adswork.local" ||

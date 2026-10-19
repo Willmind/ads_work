@@ -143,6 +143,20 @@ final class LocalBuildModel: ObservableObject {
         }
     }
 
+    func clearBuild() {
+        let path = settings.projectPath
+        let protectedPaths = [settings.libraryPath, store.root.path]
+        perform(stages: [.localCheck, .complete], showAlert: false) { token, emit in
+            do {
+                let count = try BuildDirectory.clear(path, protecting: protectedPaths, cancellation: token)
+                return ("build 已清空，共删除 \(count) 项；本地 JS 历史和安装文件保留。", nil, nil)
+            } catch {
+                emit(.log("清空未完成；已经删除的 build 内容不会自动恢复，请核对实时列表。"))
+                throw error
+            }
+        }
+    }
+
     func chooseImport() {
         let panel = NSOpenPanel()
         panel.title = "选择完整的主 JS 文件"

@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "resourceCount": 10,
+  "sourceAndMacMatch": true,
+  "version": "0.7.0.0",
+  "sha256": {
+    "app.js": "2e087917d685c219687446c427b96f09692e27a56cfaa1d1ff5ceae27ec68907",
+    "bridge.js": "18d4b970ef1c58ad128c61b46eeb88e71819a402a4e42055a130906b133806c6",
+    "build-directory.js": "ead895ed5cb16eb52191de1e470b263ee929ef495f8af5891ae0f60785b3230e",
+    "icons.svg": "77c787e4aaa20f9a1a0453425026b41bef5480edecaf6f9942ad7b88eb264081",
+    "index.html": "d79f0ef8d619840826ba73dd8d7907e1bdcae466053d9c7827a601f72f6a4aa8",
+    "logo.svg": "3477fe88c4a08d53e4efdc7364802d0b2ffe39a6f8feac34dce12460ac858f21",
+    "lucide.LICENSE.txt": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+    "motion.js": "150949071b980d48588e0b07c8ee2c76065b09da7cc08c6e49f5df4bb59981f3",
+    "preview.js": "caac4b2924327e441d6d800cf02efed7f45cdfa32557d7f16380eab0ddccffbf",
+    "styles.css": "c84407bf7b50bcdfc71f638c3032633236d83306e215b18e9992c7705f4bd710"
+  },
+  "scope": "Statically inspect resources in DLL extracted from final Windows EXE; no Windows application code executed."
+}

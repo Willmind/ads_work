@@ -53,23 +53,13 @@ struct LocalBuildService {
 
     func run(settings: LocalBuildSettings, installAfterBuild: Bool = true, onEvent: (LocalBuildEvent) -> Void) throws -> LocalBuildResult {
         onEvent(.stage(.localCheck))
-        let project = try directory(settings.projectPath, label: "本地项目")
+        let project = try BuildDirectory.project(settings.projectPath)
         let library = URL(fileURLWithPath: settings.libraryPath, isDirectory: true).standardizedFileURL
         let destination = installAfterBuild
             ? try JSFile.destination(in: settings.libraryPath)
             : library.appendingPathComponent("main.min.js")
-        let packageURL = project.appendingPathComponent("package.json")
-        let package = try JSONSerialization.jsonObject(with: Data(contentsOf: packageURL)) as? [String: Any]
-        guard let scripts = package?["scripts"] as? [String: String], scripts["buildLb"] != nil else {
-            throw LocalBuildError.message("项目 package.json 中没有 buildLb 脚本。")
-        }
-        let lockURL = project.appendingPathComponent(".ads-work-build.lock")
-        let descriptor = open(lockURL.path, O_CREAT | O_EXCL | O_WRONLY, mode_t(0o600))
-        guard descriptor >= 0 else {
-            throw LocalBuildError.message("无法取得构建锁，可能已有打包任务。若上次应用异常退出，请确认没有构建进程，再删除项目内 .ads-work-build.lock。")
-        }
-        close(descriptor)
-        defer { try? files.removeItem(at: lockURL) }
+        let buildLock = try BuildDirectoryLock(project: project)
+        defer { buildLock.release() }
         let process = LocalBuildProcess(cancellation: cancellation)
         let gitRoot = try process.run("/usr/bin/git", ["rev-parse", "--show-toplevel"], in: project)
         guard URL(fileURLWithPath: gitRoot).resolvingSymlinksInPath().standardizedFileURL.path == project.resolvingSymlinksInPath().path else {
@@ -131,17 +121,6 @@ struct LocalBuildService {
             }
             throw error
         }
-    }
-
-    private func directory(_ path: String, label: String) throws -> URL {
-        guard path.hasPrefix("/"), !path.contains("\0") else {
-            throw LocalBuildError.message("\(label)目录必须是绝对路径。")
-        }
-        let url = URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
-        guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
-            throw LocalBuildError.message("\(label)目录不存在。")
-        }
-        return url
     }
 
     private func artifacts(in build: URL) throws -> [URL] {

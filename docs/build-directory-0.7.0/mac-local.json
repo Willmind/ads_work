@@ -1,0 +1,6 @@
+{
+  "failures": [],
+  "checks": 28,
+  "scope": "真实 Mac WKWebView、页面消息桥接、临时目录安装与恢复；不接触用户 AdsPower 文件",
+  "motionScope": "临时测试副本启用减少动态效果；交付资源保留正常动画，动画另由 Chrome 检查。"
+}

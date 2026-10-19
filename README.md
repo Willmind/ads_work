@@ -63,7 +63,7 @@ git pull --ff-only origin <branch>
 
 执行区按实际操作显示阶段；失败会停留在对应步骤，成功时显示完成时间和耗时，切换并拉取还会显示目标分支和提交号。“停止”会断开连接，已经执行的远程步骤不会撤销；请核对服务器状态后再继续。
 
-## JS 本地管理（0.6.0）
+## JS 本地管理（0.7.0）
 
 应用默认进入“JS 本地管理”，原有远程操作放在“服务器分支管理”页。JS 管理只修改本机文件，不上传 JS，不读取浏览器登录信息，不访问后台新增或修改接口。网络请求仅用于下载用户粘贴的版本站点链接。
 
@@ -74,6 +74,12 @@ git pull --ff-only origin <branch>
 - **导入文件**：选择已有的完整主 JS，填写备注，校验后保存到本地库；不执行 JS。
 
 同版本号、相同内容的多次打包或导入也会保留独立记录，记录版本、备注、来源、时间、分支（本地打包）、MD5 和 SHA-256。打包前暂存旧主文件，失败时恢复，避免误用旧产物；历史版本不会被同名新产物覆盖。支持常见 Homebrew 路径与 nvm default Node.js，打包超时为 15 分钟。
+
+### build 文件夹
+
+“添加 JS”下方的独立列表实时读取所选本地项目的 `build`，递归显示 JS 相对文件名、大小和修改时间，按修改时间从新到旧排列。前台约每秒刷新，页面隐藏时每 5 秒刷新；也可点击“刷新”。切换项目目录后自动读取新目录，读取不会运行 npm、保存路径或改变 JS 历史。尚未生成 `build` 时显示空状态。
+
+点击“清空 build”后，原生确认框会显示实际目标目录。确认后删除该目录内所有文件（包括非 JS 文件）和子目录，保留 `build` 目录本身；删除不可撤销。操作只针对当前选择的项目，不删除已归档的 JS、AdsPower 安装文件或备份。打包期间禁止清空，多个应用实例共用同一把构建锁。遇到链接目录、未恢复的构建暂存目录，或误将历史库/安装目录配置在 `build` 内时拒绝清空。取消或失败后请核对实时列表，已经删除的内容不会恢复。
 
 ### 搜索与安装
 
@@ -89,9 +95,9 @@ git pull --ff-only origin <branch>
 
 JS 文件必须为非空普通 UTF-8 文件，上限 100 MB；通过 JavaScriptCore 仅检查语法，不运行脚本。网页、错误响应、无效语法和校验值不匹配都会停止归档或安装。下载链接没有 MD5 且未手动填写时，只执行语法检查并计算本地校验值，不代表已验证发布方的 MD5。下载超时为 120 秒，支持停止。操作日志进行地址和路径脱敏。
 
-构建期间使用项目内 `.ads-work-build.lock` 避免并发构建；应用异常退出后若锁仍存在，请先确认没有构建进程，再删除该锁文件。本地 JS 库使用文件锁避免多个窗口同时更新索引。操作进行时暂时禁止启动其他本地或远程任务。
+打包和清空期间共用项目内 `.ads-work-build.lock`，避免同时构建或删除；应用异常退出后若锁仍存在，请先确认没有构建进程，再删除该锁文件。本地 JS 库使用文件锁避免多个窗口同时更新索引。操作进行时暂时禁止启动其他本地或远程任务。
 
-Windows x64 版使用本地 HTML/CSS + WebView2 界面，详见 [Windows 使用与构建说明](windows/README.md)。默认项目目录为 `C:\install\mix_client`，目标 lib 使用当前用户 `%APPDATA%\adspower_global\cwd_global\lib`，两者均可在界面修改并保存。发布 ZIP 位于 `dist/AdsWork-JS-Manager-Windows-x64-0.6.0.zip`，完整解压后运行 `AdsWorkJsManager.exe`；自带 .NET 运行环境，界面另需 WebView2 Runtime。缺少时可通过随包提供的微软官方引导程序安装。仅本地打包功能需要 Node/npm、Git 和项目依赖。
+Windows x64 版使用本地 HTML/CSS + WebView2 界面，详见 [Windows 使用与构建说明](windows/README.md)。默认项目目录为 `C:\install\mix_client`，目标 lib 使用当前用户 `%APPDATA%\adspower_global\cwd_global\lib`，两者均可在界面修改并保存。发布 ZIP 位于 `dist/AdsWork-JS-Manager-Windows-x64-0.7.0.zip`，完整解压后运行 `AdsWorkJsManager.exe`；自带 .NET 运行环境，界面另需 WebView2 Runtime。缺少时可通过随包提供的微软官方引导程序安装。仅本地打包功能需要 Node/npm、Git 和项目依赖。
 
 ## 0.6.0 共用 HTML 界面
 
@@ -101,7 +107,7 @@ Mac 的 JS 本地管理改用与 Windows 相同的 HTML 页面，统一圆角卡
 
 功能图标统一使用 Lucide（`lucide-static` 1.58.0），仅将实际使用的 19 个 SVG 收录到共用的 `Shared/WebUI/icons.svg`，两页按需引用同一份资源。统一使用 24 × 24 画布、2 单位笔画和圆角端点，常规显示尺寸为 16px；装饰图标不重复进入屏幕阅读器。蓝色盒子 Logo 保留。上游完整许可证见 `Shared/WebUI/lucide.LICENSE.txt`，随 Mac 应用资源分发，Windows 构建时同时复制到包内 `Licenses` 目录。图标无需联网或额外的运行时依赖。
 
-Mac 的路径配置、本地历史和备份沿用原存储位置；服务器分支管理也使用 HTML，复用同一套样式与动画，入口位于窗口顶部工作区切换。连接表单自动保存、分支搜索弹窗、运行阶段和脱敏日志继续调用原有 Swift 核心；切换并拉取保留原生确认弹窗。该页面只包含在 Mac 版，Windows 仍仅提供 JS 本地管理。新版包为 `dist/Mix Web 部署工具-0.6.0.zip`（Apple Silicon）。
+Mac 的路径配置、本地历史和备份沿用原存储位置；服务器分支管理也使用 HTML，复用同一套样式与动画，入口位于窗口顶部工作区切换。连接表单自动保存、分支搜索弹窗、运行阶段和脱敏日志继续调用原有 Swift 核心；切换并拉取保留原生确认弹窗。该页面只包含在 Mac 版，Windows 仍仅提供 JS 本地管理。新版包为 `dist/Mix Web 部署工具-0.7.0.zip`（Apple Silicon）。
 
 ## 本地验证
 
@@ -126,3 +132,5 @@ zsh scripts/check-web.sh
 
 
 服务器页面离线验证：`zsh scripts/check-remote-web.sh`。使用真实 WKWebView、内存配置、临时假 PEM 与 Expect 模拟服务器，检查配置保存、分支搜索回填、确认入口、加载、停止和日志；不连接真实服务器。截图和报告位于 `.build/remote-web-report`。
+
+0.7.0 新增 build 目录实时列表与清空，包含双端目录边界、构建锁和取消确认验证。完整结果与限制见 [0.7.0 验证记录](docs/build-directory-0.7.0/README.md)。
